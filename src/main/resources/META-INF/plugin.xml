@@ -1,0 +1,63 @@
+<idea-plugin>
+    <id>mobi.hsz.idea.packagessearch</id>
+    <name>Packages Search</name>
+    <version>0.1.0</version>
+    <vendor email="jakub@hsz.mobi" url="https://github.com/hsz/idea-packages-search">hsz</vendor>
+
+    <description><![CDATA[
+      <h1>Packages Search</h1>
+      <br/>
+
+      <a href="https://github.com/hsz/idea-packages-search">GitHub</a> |
+      <a href="https://github.com/hsz/idea-packages-search/issues">Issues</a> |
+      <a href="https://www.paypal.me/hsz">Donate with PayPal</a>
+      <br/>
+      <br/>
+
+      IntelliJ <b>Packages Searcj</b> plugin.
+
+      <br/>
+      <br/>
+
+      <b>Features</b>
+      <ul>
+        <li></li>
+      </ul>
+
+      <br/>
+      <br/>
+    ]]></description>
+
+    <change-notes><![CDATA[
+
+        <a href="https://github.com/hsz/idea-packages-search/blob/master/CHANGELOG.md"><b>Full Changelog History</b></a>
+
+    ]]>
+    </change-notes>
+
+    <idea-version since-build="171.4694.73"/>
+
+    <extensions defaultExtensionNs="com.intellij">
+
+        <applicationService
+                serviceInterface="mobi.hsz.idea.packagessearch.components.PackagesSearchSettings"
+                serviceImplementation="mobi.hsz.idea.packagessearch.components.PackagesSearchSettings"
+        />
+
+        <projectService
+                serviceInterface="mobi.hsz.idea.packagessearch.components.PackagesSearchManager"
+                serviceImplementation="mobi.hsz.idea.packagessearch.components.PackagesSearchManager"
+        />
+
+    </extensions>
+
+    <actions>
+        <action
+                id="PackagesSearch"
+                class="mobi.hsz.idea.packagessearch.actions.PackagesSearchAction"
+                icon="AllIcons.Actions.Find"
+        >
+            <keyboard-shortcut first-keystroke="alt p" keymap="$default"/>
+        </action>
+    </actions>
+</idea-plugin>
