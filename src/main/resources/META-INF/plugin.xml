@@ -44,11 +44,6 @@
                 serviceImplementation="mobi.hsz.idea.packagessearch.components.PackagesSearchSettings"
         />
 
-        <projectService
-                serviceInterface="mobi.hsz.idea.packagessearch.components.PackagesSearchManager"
-                serviceImplementation="mobi.hsz.idea.packagessearch.components.PackagesSearchManager"
-        />
-
     </extensions>
 
     <actions>
