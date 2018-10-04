@@ -24,7 +24,9 @@ import com.intellij.util.ui.UIUtil
 import mobi.hsz.idea.packagessearch.PackagesSearchBundle
 import mobi.hsz.idea.packagessearch.components.PackagesSearchSettings
 import mobi.hsz.idea.packagessearch.ui.PackageSearchTextField
+import mobi.hsz.idea.packagessearch.utils.ApiService
 import mobi.hsz.idea.packagessearch.utils.RegistryContext
+import nl.komponents.kovenant.then
 import java.awt.*
 import java.awt.event.InputEvent
 import java.awt.event.KeyEvent
@@ -63,7 +65,14 @@ class PackagesSearchAction : AnAction(), Disposable {
                 override fun textChanged(e: DocumentEvent) {
                     println(text)
                     if (hasFocus()) {
-//                        rebuildList(pattern)
+                        val packages = list()
+                        ApiService.search(settings.state.registry, text) then {
+                            // rebuildList(pattern)
+                            println("xxx")
+                        } fail {
+                            // clear list?
+                            println("yyy")
+                        }
                     }
                 }
             })
