@@ -33,10 +33,8 @@ class ApiService {
             else -> NpmResponse.Deserializer()
         }
 
-        //        fun search(context: RegistryContext, query: String): Promise<Response, Exception> = ApiService().get(registryUrl(context, query), registryDeserializer(context))
         fun search(context: RegistryContext, query: String): Promise<Response<*>, Exception> = debouncedSearch(context, query)
     }
-
 
     private fun <T : Any> get(url: String, deserializer: ResponseDeserializable<T>): Promise<T, Exception> =
             Fuel.get(url).promise(deserializer)
@@ -51,11 +49,17 @@ class ApiService {
             val deferred = deferred<T, Exception>()
 
             if (timer != null) {
-                timer!!.cancel(false)
+                timer!!.cancel(true)
             }
 
             timer = JobScheduler.getScheduler().schedule(
-                    { fn(context, query) then { deferred.resolve(it) } fail { deferred.reject(it) } },
+                    {
+                        fn(context, query) then {
+                            deferred.resolve(it)
+                        } fail {
+                            deferred.reject(it)
+                        }
+                    },
                     delay.toLong(),
                     TimeUnit.MILLISECONDS
             )

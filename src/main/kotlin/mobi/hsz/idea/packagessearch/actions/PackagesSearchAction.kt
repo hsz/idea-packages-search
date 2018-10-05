@@ -17,12 +17,15 @@ import com.intellij.openapi.wm.impl.IdeFrameImpl
 import com.intellij.ui.*
 import com.intellij.ui.awt.RelativePoint
 import com.intellij.ui.components.JBList
+import com.intellij.ui.components.JBPanel
 import com.intellij.ui.components.panels.NonOpaquePanel
 import com.intellij.util.ui.JBEmptyBorder
 import com.intellij.util.ui.JBUI
 import com.intellij.util.ui.UIUtil
 import mobi.hsz.idea.packagessearch.PackagesSearchBundle
 import mobi.hsz.idea.packagessearch.components.PackagesSearchSettings
+import mobi.hsz.idea.packagessearch.models.Package
+import mobi.hsz.idea.packagessearch.models.Response
 import mobi.hsz.idea.packagessearch.ui.PackageSearchTextField
 import mobi.hsz.idea.packagessearch.utils.ApiService
 import mobi.hsz.idea.packagessearch.utils.RegistryContext
@@ -31,26 +34,33 @@ import java.awt.*
 import java.awt.event.InputEvent
 import java.awt.event.KeyEvent
 import java.awt.event.MouseEvent
+import javax.swing.DefaultListModel
 import javax.swing.JLabel
 import javax.swing.JList
-import javax.swing.JPanel
 import javax.swing.KeyStroke
 import javax.swing.event.DocumentEvent
 
 class PackagesSearchAction : AnAction(), Disposable {
-    private lateinit var balloon: JBPopup
+    private lateinit var popup: JBPopup
+    private lateinit var header: NonOpaquePanel
     private lateinit var packageSearch: PackageSearchTextField
     private lateinit var registryFilterButton: ActionButton
     private lateinit var settings: PackagesSearchSettings
     private lateinit var currentRegistryLabel: JLabel
     private lateinit var focusManager: IdeFocusManager
+    private lateinit var list: JBList<Package>
+    private lateinit var panel: JBPanel<JBPanel<*>>
+    private var baseHeight: Int = 0
+    private var listModel = DefaultListModel<Package>()
+    private var loading = false
+
 
     override fun actionPerformed(e: AnActionEvent) {
-        if (::balloon.isInitialized && balloon.isVisible && !balloon.isDisposed) {
+        if (::popup.isInitialized && popup.isVisible && !popup.isDisposed) {
             return
         }
-        if (::balloon.isInitialized) {
-            Disposer.dispose(balloon)
+        if (::popup.isInitialized) {
+            Disposer.dispose(popup)
         }
 
         val project = e.project
@@ -63,15 +73,16 @@ class PackagesSearchAction : AnAction(), Disposable {
         packageSearch.textEditor.apply {
             document.addDocumentListener(object : DocumentAdapter() {
                 override fun textChanged(e: DocumentEvent) {
-                    println(text)
-                    if (hasFocus()) {
-                        val packages = list()
+                    if (text.isEmpty()) {
+                        rebuildList(null)
+                    } else {
+                        loading = true
                         ApiService.search(settings.state.registry, text) then {
-                            // rebuildList(pattern)
-                            println("xxx")
+                            rebuildList(it)
                         } fail {
-                            // clear list?
-                            println("yyy")
+                            rebuildList(null)
+                        } always {
+                            loading = false
                         }
                     }
                 }
@@ -85,11 +96,11 @@ class PackagesSearchAction : AnAction(), Disposable {
             foreground = JBColor(Gray._240, Gray._200)
         }
 
-
-        val list = JBList<String>("webpack", "webpack-dev-server", "uglifyjs-webpack-plugin").apply {
-            cellRenderer = object : ColoredListCellRenderer<String>() {
-                override fun customizeCellRenderer(list: JList<out String>, value: String?, index: Int, selected: Boolean, hasFocus: Boolean) {
-                    append(value!!)
+        list = JBList<Package>(listModel.apply { clear() }).apply {
+            isVisible = false
+            cellRenderer = object : ColoredListCellRenderer<Package>() {
+                override fun customizeCellRenderer(list: JList<out Package>, value: Package?, index: Int, selected: Boolean, hasFocus: Boolean) {
+                    append(value!!.name)
                 }
             }
         }
@@ -107,8 +118,22 @@ class PackagesSearchAction : AnAction(), Disposable {
             }.installOn(this)
         }
 
+        registryFilterButton = ActionButton(registryFilterPopupAction, registryFilterPopupAction.templatePresentation, ActionPlaces.UNKNOWN, ActionToolbar.DEFAULT_MINIMUM_BUTTON_SIZE).apply {
+            isOpaque = false
+        }
 
-        val panel = object : JPanel(BorderLayout()) {
+        header = NonOpaquePanel(BorderLayout()).apply {
+            add(NonOpaquePanel(BorderLayout()).apply {
+                add(title, BorderLayout.WEST)
+                add(currentRegistryLabel, BorderLayout.EAST)
+            }, BorderLayout.WEST)
+            add(NonOpaquePanel(BorderLayout()).apply {
+                add(registryFilterButton, BorderLayout.WEST)
+                add(settingsButton, BorderLayout.EAST)
+            }, BorderLayout.EAST)
+        }
+
+        panel = object : JBPanel<JBPanel<*>>(BorderLayout()) {
             override fun paintComponent(g: Graphics) {
                 getGradientColors().apply {
                     (g as Graphics2D).paint = GradientPaint(0f, 0f, startColor, 0f, height.toFloat(), endColor)
@@ -117,20 +142,8 @@ class PackagesSearchAction : AnAction(), Disposable {
             }
         }.apply {
             border = IdeBorderFactory.createEmptyBorder(3, 5, 4, 5)
-            registryFilterButton = ActionButton(registryFilterPopupAction, registryFilterPopupAction.templatePresentation, ActionPlaces.UNKNOWN, ActionToolbar.DEFAULT_MINIMUM_BUTTON_SIZE).apply {
-                isOpaque = false
-            }
 
-            add(NonOpaquePanel(BorderLayout()).apply {
-                add(NonOpaquePanel(BorderLayout()).apply {
-                    add(title, BorderLayout.WEST)
-                    add(currentRegistryLabel, BorderLayout.EAST)
-                }, BorderLayout.WEST)
-                add(NonOpaquePanel(BorderLayout()).apply {
-                    add(registryFilterButton, BorderLayout.WEST)
-                    add(settingsButton, BorderLayout.EAST)
-                }, BorderLayout.EAST)
-            }, BorderLayout.NORTH)
+            add(header, BorderLayout.NORTH)
             add(packageSearch, BorderLayout.CENTER)
             add(NonOpaquePanel(BorderLayout()).apply { add(list) }, BorderLayout.SOUTH)
         }
@@ -149,7 +162,7 @@ class PackagesSearchAction : AnAction(), Disposable {
         }
 
         val builder = JBPopupFactory.getInstance().createComponentPopupBuilder(panel, packageSearch.textEditor)
-        balloon = builder
+        popup = builder
                 .setCancelOnClickOutside(true)
                 .setModalContext(false)
                 .setRequestFocus(true)
@@ -159,11 +172,38 @@ class PackagesSearchAction : AnAction(), Disposable {
                     show(showPoint)
                 }
 
-        registryFilterPopupAction.registerCustomShortcutSet(CustomShortcutSet.fromString("alt P"), panel, balloon)
+        baseHeight = panel.size.height
+        registryFilterPopupAction.registerCustomShortcutSet(CustomShortcutSet.fromString("alt P"), panel, popup)
     }
 
     override fun dispose() = Disposer.dispose(packageSearch)
 
+    private fun rebuildList(data: Response<*>?) {
+        val newModel = DefaultListModel<Package>().apply {
+            data?.items?.forEach(this::addElement)
+        }
+
+        list.apply {
+            model = newModel
+            isVisible = true
+            setEmptyText(when {
+                loading -> "Loading..."
+                else -> "No packages found"
+            })
+            revalidate()
+            repaint()
+        }
+
+        updatePopupBounds()
+    }
+
+    private fun updatePopupBounds() {
+        if (!popup.isVisible) {
+            return
+        }
+
+        popup.size = Dimension(popup.size.width, baseHeight + list.preferredSize.height)
+    }
 
     private fun registryChanged() {
         currentRegistryLabel.text = settings.state.registry.toString()
