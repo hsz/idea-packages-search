@@ -22,14 +22,16 @@ import com.intellij.ui.components.panels.NonOpaquePanel
 import com.intellij.util.ui.JBEmptyBorder
 import com.intellij.util.ui.JBUI
 import com.intellij.util.ui.UIUtil
+import kotlinx.coroutines.experimental.Job
+import kotlinx.coroutines.experimental.delay
+import kotlinx.coroutines.experimental.launch
 import mobi.hsz.idea.packagessearch.PackagesSearchBundle
 import mobi.hsz.idea.packagessearch.components.PackagesSearchSettings
+import mobi.hsz.idea.packagessearch.models.NpmPackage
 import mobi.hsz.idea.packagessearch.models.Package
-import mobi.hsz.idea.packagessearch.models.Response
 import mobi.hsz.idea.packagessearch.ui.PackageSearchTextField
 import mobi.hsz.idea.packagessearch.utils.ApiService
 import mobi.hsz.idea.packagessearch.utils.RegistryContext
-import nl.komponents.kovenant.then
 import java.awt.*
 import java.awt.event.InputEvent
 import java.awt.event.KeyEvent
@@ -72,17 +74,24 @@ class PackagesSearchAction : AnAction(), Disposable {
         packageSearch = PackageSearchTextField()
         packageSearch.textEditor.apply {
             document.addDocumentListener(object : DocumentAdapter() {
+
+                private var job: Job? = null
+
                 override fun textChanged(e: DocumentEvent) {
+                    job?.cancel()
+
                     if (text.isEmpty()) {
-                        rebuildList(null)
+                        rebuildList(null, false)
                     } else {
                         loading = true
-                        ApiService.search(settings.state.registry, text) then {
-                            rebuildList(it)
-                        } fail {
-                            rebuildList(null)
-                        } always {
-                            loading = false
+                        rebuildList(null)
+                        job = launch {
+                            delay(500)
+                            ApiService.search(settings.state.registry, text) { (response, error) ->
+                                println(response)
+                                loading = false
+                                rebuildList(response?.items)
+                            }
                         }
                     }
                 }
@@ -178,14 +187,16 @@ class PackagesSearchAction : AnAction(), Disposable {
 
     override fun dispose() = Disposer.dispose(packageSearch)
 
-    private fun rebuildList(data: Response<*>?) {
+    private fun rebuildList(data: List<NpmPackage>?) = rebuildList(data, true)
+
+    private fun rebuildList(data: List<NpmPackage>?, visible: Boolean) {
         val newModel = DefaultListModel<Package>().apply {
-            data?.items?.forEach(this::addElement)
+            data?.forEach(this::addElement)
         }
 
         list.apply {
             model = newModel
-            isVisible = true
+            isVisible = visible
             setEmptyText(when {
                 loading -> "Loading..."
                 else -> "No packages found"
@@ -194,15 +205,14 @@ class PackagesSearchAction : AnAction(), Disposable {
             repaint()
         }
 
-        updatePopupBounds()
-    }
+        if (popup.isVisible) {
+            val listHeight = when (list.isVisible) {
+                true -> list.preferredSize.height
+                false -> 0
+            }
 
-    private fun updatePopupBounds() {
-        if (!popup.isVisible) {
-            return
+            popup.size = Dimension(popup.size.width, baseHeight + listHeight)
         }
-
-        popup.size = Dimension(popup.size.width, baseHeight + list.preferredSize.height)
     }
 
     private fun registryChanged() {

@@ -31,10 +31,9 @@ repositories {
 
 dependencies {
     compile "org.jetbrains.kotlin:kotlin-stdlib-jdk8:$kotlinVersion"
+    compile("org.jetbrains.kotlinx:kotlinx-coroutines-core:$kotlinCoroutinesVersion")
     compile "com.github.kittinunf.fuel:fuel:$fuelVersion"
     compile "com.github.kittinunf.fuel:fuel-gson:$fuelVersion"
-    compile "nl.komponents.kovenant:kovenant:$kovenantVersion"
-    compile "nl.komponents.kovenant:kovenant-functional:$kovenantVersion"
     testCompile "com.nhaarman.mockitokotlin2:mockito-kotlin:$mockitoKotlinVersion"
 }
 
