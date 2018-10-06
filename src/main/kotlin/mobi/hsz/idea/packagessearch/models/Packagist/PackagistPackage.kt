@@ -1,4 +1,8 @@
-package mobi.hsz.idea.packagessearch.models
+package mobi.hsz.idea.packagessearch.models.Packagist
+
+import mobi.hsz.idea.packagessearch.models.NPM.PackageLeaf
+import mobi.hsz.idea.packagessearch.models.NPM.Score
+import mobi.hsz.idea.packagessearch.models.Package
 
 data class PackagistPackage(
         val `package`: PackageLeaf,

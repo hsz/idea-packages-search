@@ -1,4 +1,6 @@
-package mobi.hsz.idea.packagessearch.models
+package mobi.hsz.idea.packagessearch.models.NPM
+
+import mobi.hsz.idea.packagessearch.models.Package
 
 data class NpmPackage(
         val `package`: PackageLeaf,
