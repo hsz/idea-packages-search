@@ -31,6 +31,8 @@ import mobi.hsz.idea.packagessearch.models.NpmPackage
 import mobi.hsz.idea.packagessearch.models.Package
 import mobi.hsz.idea.packagessearch.ui.PackageSearchTextField
 import mobi.hsz.idea.packagessearch.utils.ApiService
+import mobi.hsz.idea.packagessearch.utils.Constants.Companion.GRADIENT
+import mobi.hsz.idea.packagessearch.utils.Constants.Companion.SEARCH_DELAY
 import mobi.hsz.idea.packagessearch.utils.RegistryContext
 import java.awt.*
 import java.awt.event.InputEvent
@@ -86,8 +88,8 @@ class PackagesSearchAction : AnAction(), Disposable {
                         loading = true
                         rebuildList(null)
                         job = launch {
-                            delay(500)
-                            ApiService.search(settings.state.registry, text) { (response, error) ->
+                            delay(SEARCH_DELAY)
+                            ApiService.search(settings.state.registry, text) { (response) ->
                                 println(response)
                                 loading = false
                                 rebuildList(response?.items)
@@ -198,8 +200,8 @@ class PackagesSearchAction : AnAction(), Disposable {
             model = newModel
             isVisible = visible
             setEmptyText(when {
-                loading -> "Loading..."
-                else -> "No packages found"
+                loading -> PackagesSearchBundle.message("ui.list.searching")
+                else -> PackagesSearchBundle.message("ui.list.empty")
             })
             revalidate()
             repaint()
@@ -222,9 +224,7 @@ class PackagesSearchAction : AnAction(), Disposable {
 
     private fun openSettings() = println("openSettings")
 
-    private fun getGradientColors() = Gradient(
-            JBColor(0x65F065, 0x455C3F),
-            JBColor(0x3CCC2F, 0x365735))
+    private fun getGradientColors() = GRADIENT
 
     inner class RegistryFilterPopupAction : AnAction(FindBundle.message("find.popup.show.filter.popup"), "Description", AllIcons.General.MoreTabs) {
         private val switchContextGroup: DefaultActionGroup
