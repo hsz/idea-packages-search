@@ -27,7 +27,6 @@ import kotlinx.coroutines.experimental.delay
 import kotlinx.coroutines.experimental.launch
 import mobi.hsz.idea.packagessearch.PackagesSearchBundle
 import mobi.hsz.idea.packagessearch.components.PackagesSearchSettings
-import mobi.hsz.idea.packagessearch.models.NpmPackage
 import mobi.hsz.idea.packagessearch.models.Package
 import mobi.hsz.idea.packagessearch.ui.PackageSearchTextField
 import mobi.hsz.idea.packagessearch.utils.ApiService
@@ -189,9 +188,9 @@ class PackagesSearchAction : AnAction(), Disposable {
 
     override fun dispose() = Disposer.dispose(packageSearch)
 
-    private fun rebuildList(data: List<NpmPackage>?) = rebuildList(data, true)
+    private fun rebuildList(data: List<Package>?) = rebuildList(data, true)
 
-    private fun rebuildList(data: List<NpmPackage>?, visible: Boolean) {
+    private fun rebuildList(data: List<Package>?, visible: Boolean) {
         val newModel = DefaultListModel<Package>().apply {
             data?.forEach(this::addElement)
         }
