@@ -32,7 +32,9 @@ repositories {
 dependencies {
     compile "org.jetbrains.kotlin:kotlin-stdlib-jdk8:$kotlinVersion"
     compile("org.jetbrains.kotlinx:kotlinx-coroutines-core:$kotlinCoroutinesVersion")
+    compile("org.jetbrains.kotlinx:kotlinx-coroutines-swing:$kotlinCoroutinesVersion")
     compile "com.github.kittinunf.fuel:fuel:$fuelVersion"
+    compile "com.github.kittinunf.fuel:fuel-coroutines:$fuelVersion"
     compile "com.github.kittinunf.fuel:fuel-gson:$fuelVersion"
     testCompile "com.nhaarman.mockitokotlin2:mockito-kotlin:$mockitoKotlinVersion"
 }

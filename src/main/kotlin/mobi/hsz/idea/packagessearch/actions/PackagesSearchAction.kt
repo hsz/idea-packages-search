@@ -22,9 +22,8 @@ import com.intellij.ui.components.panels.NonOpaquePanel
 import com.intellij.util.ui.JBEmptyBorder
 import com.intellij.util.ui.JBUI
 import com.intellij.util.ui.UIUtil
-import kotlinx.coroutines.experimental.Job
-import kotlinx.coroutines.experimental.delay
-import kotlinx.coroutines.experimental.launch
+import kotlinx.coroutines.experimental.*
+import kotlinx.coroutines.experimental.swing.Swing
 import mobi.hsz.idea.packagessearch.PackagesSearchBundle
 import mobi.hsz.idea.packagessearch.components.PackagesSearchSettings
 import mobi.hsz.idea.packagessearch.models.Package
@@ -42,8 +41,9 @@ import javax.swing.JLabel
 import javax.swing.JList
 import javax.swing.KeyStroke
 import javax.swing.event.DocumentEvent
+import kotlin.coroutines.experimental.CoroutineContext
 
-class PackagesSearchAction : AnAction(), Disposable {
+class PackagesSearchAction : AnAction(), Disposable, CoroutineScope {
     private lateinit var popup: JBPopup
     private lateinit var header: NonOpaquePanel
     private lateinit var packageSearch: PackageSearchTextField
@@ -53,10 +53,12 @@ class PackagesSearchAction : AnAction(), Disposable {
     private lateinit var focusManager: IdeFocusManager
     private lateinit var list: JBList<Package>
     private lateinit var panel: JBPanel<JBPanel<*>>
-    private var baseHeight: Int = 0
+    private lateinit var job: Job
+    private lateinit var baseSize: Dimension
     private var listModel = DefaultListModel<Package>()
-    private var loading = false
 
+    override val coroutineContext: CoroutineContext
+        get() = Dispatchers.Swing + job
 
     override fun actionPerformed(e: AnActionEvent) {
         if (::popup.isInitialized && popup.isVisible && !popup.isDisposed) {
@@ -71,28 +73,31 @@ class PackagesSearchAction : AnAction(), Disposable {
             return
         }
 
+        job = Job()
         settings = PackagesSearchSettings.getInstance(project)
         packageSearch = PackageSearchTextField()
         packageSearch.textEditor.apply {
             document.addDocumentListener(object : DocumentAdapter() {
-
-                private var job: Job? = null
-
                 override fun textChanged(e: DocumentEvent) {
-                    job?.cancel()
+                    job.cancelChildren()
+                    if (!hasFocus()) {
+                        return
+                    }
 
                     if (text.isEmpty()) {
-                        rebuildList(null, false)
+                        rebuildList(visible = false)
                     } else {
-                        loading = true
-                        rebuildList(null)
-                        job = launch {
+                        rebuildList(loading = true)
+                        launch(coroutineContext) {
                             delay(SEARCH_DELAY)
-                            ApiService.search(settings.state.registry, text) { (response) ->
-                                println(response)
-                                loading = false
-                                rebuildList(response?.items)
-                            }
+                            val (req, res, result) = ApiService.search(settings.state.registry, text)
+                            rebuildList(data = result.component1()?.items, loading = false)
+
+//                            ApiService.search(settings.state.registry, text) {
+//                                SwingUtilities.invokeLater {
+//                                    rebuildList(data = it.items, loading = false)
+//                                }
+//                            }
                         }
                     }
                 }
@@ -113,6 +118,26 @@ class PackagesSearchAction : AnAction(), Disposable {
                     append(value!!.name)
                 }
             }
+//            this.installCellRenderer<Package> { pkg ->
+//                NonOpaquePanel(BorderLayout()).apply {
+//                    border = JBEmptyBorder(10)
+//
+//                    JBLabel(pkg.name).let {
+//                        it.add(it, BorderLayout.WEST)
+//                    }
+//
+//                    JBLabel(pkg.version).let {
+//                        it.fontColor = UIUtil.FontColor.BRIGHTER
+//                        add(it, BorderLayout.EAST)
+//                    }
+//
+//                    JBLabel(pkg.description).let {
+//                        it.border = JBEmptyBorder(5, 0, 0, 0)
+//                        it.fontColor = UIUtil.FontColor.BRIGHTER
+//                        add(it, BorderLayout.SOUTH)
+//                    }
+//                }
+//            }
         }
         val registryFilterPopupAction = RegistryFilterPopupAction()
         val title = JLabel(PackagesSearchBundle.message("ui.title")).apply {
@@ -182,37 +207,43 @@ class PackagesSearchAction : AnAction(), Disposable {
                     show(showPoint)
                 }
 
-        baseHeight = panel.size.height
+        baseSize = panel.size
         registryFilterPopupAction.registerCustomShortcutSet(CustomShortcutSet.fromString("alt P"), panel, popup)
     }
 
-    override fun dispose() = Disposer.dispose(packageSearch)
+    override fun dispose() {
+        Disposer.dispose(packageSearch)
+        job.cancel()
+    }
 
-    private fun rebuildList(data: List<Package>?) = rebuildList(data, true)
+    private fun rebuildList(data: List<Package>? = null, visible: Boolean = true, loading: Boolean = false) {
+        assert(EventQueue.isDispatchThread()) { "Must be EDT" }
+        val listHeight = when (visible) {
+            true -> (data?.size ?: 1).times(20)
+//            true -> list.preferredSize.height
+            false -> 0
+        }
+        popup.size = Dimension(baseSize.width, baseSize.height + listHeight)
 
-    private fun rebuildList(data: List<Package>?, visible: Boolean) {
-        val newModel = DefaultListModel<Package>().apply {
+//        var newListModel = DefaultListModel<Package>()
+
+        listModel.apply {
+            clear()
             data?.forEach(this::addElement)
         }
 
         list.apply {
-            model = newModel
+            //            model = newListModel
             isVisible = visible
+            setPaintBusy(loading)
             setEmptyText(when {
                 loading -> PackagesSearchBundle.message("ui.list.searching")
                 else -> PackagesSearchBundle.message("ui.list.empty")
             })
+
+            updateUI()
             revalidate()
             repaint()
-        }
-
-        if (popup.isVisible) {
-            val listHeight = when (list.isVisible) {
-                true -> list.preferredSize.height
-                false -> 0
-            }
-
-            popup.size = Dimension(popup.size.width, baseHeight + listHeight)
         }
     }
 
