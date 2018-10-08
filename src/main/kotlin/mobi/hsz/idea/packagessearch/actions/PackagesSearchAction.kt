@@ -52,8 +52,8 @@ class PackagesSearchAction : AnAction(), Disposable, CoroutineScope {
     private lateinit var focusManager: IdeFocusManager
     private lateinit var list: JBList<Package>
     private lateinit var panel: JBPanel<JBPanel<*>>
-    private lateinit var job: Job
     private lateinit var baseSize: Dimension
+    private val job = Job()
     private var listModel = CollectionListModel<Package>()
 
     override val coroutineContext: CoroutineContext
@@ -72,7 +72,6 @@ class PackagesSearchAction : AnAction(), Disposable, CoroutineScope {
             return
         }
 
-        job = Job()
         settings = PackagesSearchSettings.getInstance(project)
         packageSearch = PackageSearchTextField()
         packageSearch.textEditor.apply {
@@ -89,13 +88,9 @@ class PackagesSearchAction : AnAction(), Disposable, CoroutineScope {
                         rebuildList(loading = true)
                         launch(coroutineContext) {
                             delay(SEARCH_DELAY)
-//                            val (req, res, result) = ApiService.search(settings.state.registry, text)
-//                            rebuildList(data = result.component1()?.items, loading = false)
-
-                            ApiService.searchx(settings.state.registry, text) {
-                                SwingUtilities.invokeLater {
-                                    rebuildList(data = it.items, loading = false)
-                                }
+                            val (result) = ApiService.search(settings.state.registry, text)
+                            SwingUtilities.invokeLater {
+                                rebuildList(data = result?.items, loading = false)
                             }
                         }
                     }

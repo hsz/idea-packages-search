@@ -8,7 +8,7 @@ class ApiService {
     companion object {
         fun search(context: RegistryContext, query: String) =
                 context.model().let {
-                    Fuel.get(it.url(query)).responseObject(it.deserializer())
+                    Fuel.get(it.url(query)).responseObject(it.deserializer()).third
                 }
 
         fun searchx(context: RegistryContext, query: String, callback: (Response<Package>) -> Unit) =
