@@ -16,6 +16,7 @@ import com.intellij.openapi.wm.WindowManager
 import com.intellij.openapi.wm.impl.IdeFrameImpl
 import com.intellij.ui.*
 import com.intellij.ui.awt.RelativePoint
+import com.intellij.ui.components.JBLabel
 import com.intellij.ui.components.JBList
 import com.intellij.ui.components.JBPanel
 import com.intellij.ui.components.panels.NonOpaquePanel
@@ -23,7 +24,6 @@ import com.intellij.util.ui.JBEmptyBorder
 import com.intellij.util.ui.JBUI
 import com.intellij.util.ui.UIUtil
 import kotlinx.coroutines.experimental.*
-import kotlinx.coroutines.experimental.swing.Swing
 import mobi.hsz.idea.packagessearch.PackagesSearchBundle
 import mobi.hsz.idea.packagessearch.components.PackagesSearchSettings
 import mobi.hsz.idea.packagessearch.models.Package
@@ -36,10 +36,9 @@ import java.awt.*
 import java.awt.event.InputEvent
 import java.awt.event.KeyEvent
 import java.awt.event.MouseEvent
-import javax.swing.DefaultListModel
 import javax.swing.JLabel
-import javax.swing.JList
 import javax.swing.KeyStroke
+import javax.swing.SwingUtilities
 import javax.swing.event.DocumentEvent
 import kotlin.coroutines.experimental.CoroutineContext
 
@@ -55,10 +54,10 @@ class PackagesSearchAction : AnAction(), Disposable, CoroutineScope {
     private lateinit var panel: JBPanel<JBPanel<*>>
     private lateinit var job: Job
     private lateinit var baseSize: Dimension
-    private var listModel = DefaultListModel<Package>()
+    private var listModel = CollectionListModel<Package>()
 
     override val coroutineContext: CoroutineContext
-        get() = Dispatchers.Swing + job
+        get() = Dispatchers.Default + job
 
     override fun actionPerformed(e: AnActionEvent) {
         if (::popup.isInitialized && popup.isVisible && !popup.isDisposed) {
@@ -90,14 +89,14 @@ class PackagesSearchAction : AnAction(), Disposable, CoroutineScope {
                         rebuildList(loading = true)
                         launch(coroutineContext) {
                             delay(SEARCH_DELAY)
-                            val (req, res, result) = ApiService.search(settings.state.registry, text)
-                            rebuildList(data = result.component1()?.items, loading = false)
+//                            val (req, res, result) = ApiService.search(settings.state.registry, text)
+//                            rebuildList(data = result.component1()?.items, loading = false)
 
-//                            ApiService.search(settings.state.registry, text) {
-//                                SwingUtilities.invokeLater {
-//                                    rebuildList(data = it.items, loading = false)
-//                                }
-//                            }
+                            ApiService.searchx(settings.state.registry, text) {
+                                SwingUtilities.invokeLater {
+                                    rebuildList(data = it.items, loading = false)
+                                }
+                            }
                         }
                     }
                 }
@@ -107,37 +106,32 @@ class PackagesSearchAction : AnAction(), Disposable, CoroutineScope {
         focusManager.requestFocus(packageSearch.textEditor, true)
 
         currentRegistryLabel = JLabel(settings.state.registry.toString()).apply {
-            border = JBEmptyBorder(0, 5, 0, 5)
+            border = JBEmptyBorder(0, 10, 0, 10)
             foreground = JBColor(Gray._240, Gray._200)
         }
 
-        list = JBList<Package>(listModel.apply { clear() }).apply {
+        list = JBList<Package>(listModel.apply { removeAll() }).apply {
             isVisible = false
-            cellRenderer = object : ColoredListCellRenderer<Package>() {
-                override fun customizeCellRenderer(list: JList<out Package>, value: Package?, index: Int, selected: Boolean, hasFocus: Boolean) {
-                    append(value!!.name)
+            this.installCellRenderer<Package> { pkg ->
+                NonOpaquePanel(BorderLayout()).apply {
+                    border = JBEmptyBorder(3)
+
+                    JBLabel(pkg.name).let {
+                        add(it, BorderLayout.WEST)
+                    }
+
+                    JBLabel(pkg.version).let {
+                        it.fontColor = UIUtil.FontColor.BRIGHTER
+                        add(it, BorderLayout.EAST)
+                    }
+
+                    JBLabel(pkg.description).let {
+                        it.border = JBEmptyBorder(3, 0, 0, 0)
+                        it.fontColor = UIUtil.FontColor.BRIGHTER
+                        add(it, BorderLayout.SOUTH)
+                    }
                 }
             }
-//            this.installCellRenderer<Package> { pkg ->
-//                NonOpaquePanel(BorderLayout()).apply {
-//                    border = JBEmptyBorder(10)
-//
-//                    JBLabel(pkg.name).let {
-//                        it.add(it, BorderLayout.WEST)
-//                    }
-//
-//                    JBLabel(pkg.version).let {
-//                        it.fontColor = UIUtil.FontColor.BRIGHTER
-//                        add(it, BorderLayout.EAST)
-//                    }
-//
-//                    JBLabel(pkg.description).let {
-//                        it.border = JBEmptyBorder(5, 0, 0, 0)
-//                        it.fontColor = UIUtil.FontColor.BRIGHTER
-//                        add(it, BorderLayout.SOUTH)
-//                    }
-//                }
-//            }
         }
         val registryFilterPopupAction = RegistryFilterPopupAction()
         val title = JLabel(PackagesSearchBundle.message("ui.title")).apply {
@@ -218,18 +212,21 @@ class PackagesSearchAction : AnAction(), Disposable, CoroutineScope {
 
     private fun rebuildList(data: List<Package>? = null, visible: Boolean = true, loading: Boolean = false) {
         assert(EventQueue.isDispatchThread()) { "Must be EDT" }
-        val listHeight = when (visible) {
-            true -> (data?.size ?: 1).times(20)
-//            true -> list.preferredSize.height
-            false -> 0
-        }
-        popup.size = Dimension(baseSize.width, baseSize.height + listHeight)
 
 //        var newListModel = DefaultListModel<Package>()
+//        newListModel.apply {
+//            data?.forEach(this::addElement)
+//        }
 
-        listModel.apply {
-            clear()
-            data?.forEach(this::addElement)
+//        listModel.apply {
+//            clear()
+//            data?.forEach(this::addElement)
+//        }
+
+        if (data === null) {
+            listModel.removeAll()
+        } else {
+            listModel.replaceAll(data)
         }
 
         list.apply {
@@ -241,10 +238,19 @@ class PackagesSearchAction : AnAction(), Disposable, CoroutineScope {
                 else -> PackagesSearchBundle.message("ui.list.empty")
             })
 
-            updateUI()
-            revalidate()
-            repaint()
+//            updateUI()
+//            revalidate()
+//            repaint()
         }
+
+
+        val listHeight = when (visible) {
+//            true -> (data?.size ?: 1).times(20)
+            true -> list.preferredSize.height
+            false -> 0
+        }
+        popup.size = Dimension(baseSize.width, baseSize.height + listHeight)
+
     }
 
     private fun registryChanged() {
