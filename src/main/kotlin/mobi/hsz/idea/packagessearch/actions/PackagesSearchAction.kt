@@ -4,7 +4,14 @@ import com.intellij.find.FindBundle
 import com.intellij.icons.AllIcons
 import com.intellij.ide.ui.UISettings
 import com.intellij.openapi.Disposable
-import com.intellij.openapi.actionSystem.*
+import com.intellij.openapi.actionSystem.ActionPlaces
+import com.intellij.openapi.actionSystem.ActionToolbar
+import com.intellij.openapi.actionSystem.AnAction
+import com.intellij.openapi.actionSystem.AnActionEvent
+import com.intellij.openapi.actionSystem.CustomShortcutSet
+import com.intellij.openapi.actionSystem.DefaultActionGroup
+import com.intellij.openapi.actionSystem.PlatformDataKeys
+import com.intellij.openapi.actionSystem.ToggleAction
 import com.intellij.openapi.actionSystem.impl.ActionButton
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.ui.popup.JBPopup
@@ -15,7 +22,12 @@ import com.intellij.openapi.util.SystemInfo
 import com.intellij.openapi.wm.IdeFocusManager
 import com.intellij.openapi.wm.WindowManager
 import com.intellij.openapi.wm.impl.IdeFrameImpl
-import com.intellij.ui.*
+import com.intellij.ui.ClickListener
+import com.intellij.ui.CollectionListModel
+import com.intellij.ui.DocumentAdapter
+import com.intellij.ui.Gray
+import com.intellij.ui.IdeBorderFactory
+import com.intellij.ui.JBColor
 import com.intellij.ui.awt.RelativePoint
 import com.intellij.ui.components.JBLabel
 import com.intellij.ui.components.JBList
@@ -24,17 +36,32 @@ import com.intellij.ui.components.panels.NonOpaquePanel
 import com.intellij.util.ui.JBEmptyBorder
 import com.intellij.util.ui.JBUI
 import com.intellij.util.ui.UIUtil
-import kotlinx.coroutines.*
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.cancelChildren
+import kotlinx.coroutines.launch
 import mobi.hsz.idea.packagessearch.PackagesSearchBundle
 import mobi.hsz.idea.packagessearch.components.PackagesSearchSettings
 import mobi.hsz.idea.packagessearch.models.Package
 import mobi.hsz.idea.packagessearch.ui.PackageSearchTextField
 import mobi.hsz.idea.packagessearch.utils.ApiService
 import mobi.hsz.idea.packagessearch.utils.Constants.Companion.GRADIENT
-import mobi.hsz.idea.packagessearch.utils.Constants.Companion.SEARCH_DELAY
 import mobi.hsz.idea.packagessearch.utils.RegistryContext
-import java.awt.*
-import java.awt.event.*
+import java.awt.BorderLayout
+import java.awt.Dimension
+import java.awt.Font
+import java.awt.GradientPaint
+import java.awt.Graphics
+import java.awt.Graphics2D
+import java.awt.Point
+import java.awt.event.FocusEvent
+import java.awt.event.FocusListener
+import java.awt.event.InputEvent
+import java.awt.event.KeyAdapter
+import java.awt.event.KeyEvent
+import java.awt.event.MouseEvent
+import java.awt.event.MouseListener
 import javax.swing.JLabel
 import javax.swing.KeyStroke
 import javax.swing.SwingUtilities
@@ -55,9 +82,11 @@ class PackagesSearchAction : AnAction(), Disposable, CoroutineScope {
     private lateinit var baseSize: Dimension
     private val job = Job()
     private var listModel = CollectionListModel<Package>()
+    private var previousData: List<Package>? = null
+    private var previousLoading = false
 
     override val coroutineContext: CoroutineContext
-        get() = Dispatchers.Default + job
+        get() = Dispatchers.Main + job
 
     override fun actionPerformed(e: AnActionEvent) {
         if (::popup.isInitialized && popup.isVisible && !popup.isDisposed) {
@@ -87,8 +116,8 @@ class PackagesSearchAction : AnAction(), Disposable, CoroutineScope {
                         } else {
                             rebuildList(loading = true)
                             launch(coroutineContext) {
-                                delay(SEARCH_DELAY)
-                                val (result) = ApiService.search(settings.state.registry, text)
+                                //                                delay(SEARCH_DELAY)
+                                val (result) = ApiService.search(settings.state.registry, text, coroutineContext)
                                 SwingUtilities.invokeLater {
                                     rebuildList(data = result?.items, loading = false)
                                 }
@@ -101,7 +130,8 @@ class PackagesSearchAction : AnAction(), Disposable, CoroutineScope {
                     override fun keyPressed(e: KeyEvent?) {
                         when (e?.keyCode) {
                             KeyEvent.VK_UP -> list.selectedIndex = Math.max(list.selectedIndex - 1, 0)
-                            KeyEvent.VK_DOWN -> list.selectedIndex = Math.min(list.selectedIndex + 1, list.itemsCount - 1)
+                            KeyEvent.VK_DOWN -> list.selectedIndex =
+                                Math.min(list.selectedIndex + 1, list.itemsCount - 1)
                             KeyEvent.VK_TAB -> println("TAB!") // TODO implement -> show package details
                             KeyEvent.VK_ENTER -> println("ENTER!") // TODO implement -> install package
                         }
@@ -151,7 +181,8 @@ class PackagesSearchAction : AnAction(), Disposable, CoroutineScope {
             border = IdeBorderFactory.createEmptyBorder(3, 3, 0, 3)
             fontColor = UIUtil.FontColor.BRIGHTER
             font = JBUI.Fonts.smallFont()
-            text = "[Tab] show package details   [Enter] install   [Alt+Enter] open in browser" // TODO use enhance, move to messages
+            text =
+                "[Tab] show package details   [Enter] install   [Alt+Enter] open in browser" // TODO use enhance, move to messages
         }
 
         val registryFilterPopupAction = RegistryFilterPopupAction()
@@ -168,7 +199,12 @@ class PackagesSearchAction : AnAction(), Disposable, CoroutineScope {
             }.installOn(this)
         }
 
-        registryFilterButton = ActionButton(registryFilterPopupAction, registryFilterPopupAction.templatePresentation, ActionPlaces.UNKNOWN, ActionToolbar.DEFAULT_MINIMUM_BUTTON_SIZE).apply {
+        registryFilterButton = ActionButton(
+            registryFilterPopupAction,
+            registryFilterPopupAction.templatePresentation,
+            ActionPlaces.UNKNOWN,
+            ActionToolbar.DEFAULT_MINIMUM_BUTTON_SIZE
+        ).apply {
             isOpaque = false
         }
 
@@ -216,14 +252,14 @@ class PackagesSearchAction : AnAction(), Disposable, CoroutineScope {
 
         val builder = JBPopupFactory.getInstance().createComponentPopupBuilder(panel, packageSearch.textEditor)
         popup = builder
-                .setCancelOnClickOutside(true)
-                .setModalContext(false)
-                .setRequestFocus(true)
-                .setCancelCallback { true }
-                .createPopup().apply {
-                    content.border = JBUI.Borders.empty()
-                    show(showPoint)
-                }
+            .setCancelOnClickOutside(true)
+            .setModalContext(false)
+            .setRequestFocus(true)
+            .setCancelCallback { true }
+            .createPopup().apply {
+                content.border = JBUI.Borders.empty()
+                show(showPoint)
+            }
 
         baseSize = panel.size
         registryFilterPopupAction.registerCustomShortcutSet(CustomShortcutSet.fromString("alt P"), panel, popup)
@@ -236,6 +272,13 @@ class PackagesSearchAction : AnAction(), Disposable, CoroutineScope {
 
     private fun rebuildList(data: List<Package>? = null, visible: Boolean = true, loading: Boolean = false) {
         ApplicationManager.getApplication().assertIsDispatchThread()
+
+        if (data === previousData && visible == list.isVisible && loading == previousLoading) {
+            return
+        }
+
+        previousData = data
+        previousLoading = loading
         if (data === null) {
             listModel.removeAll()
         } else {
@@ -246,10 +289,12 @@ class PackagesSearchAction : AnAction(), Disposable, CoroutineScope {
             isVisible = visible
             selectedIndex = 0
             setPaintBusy(loading)
-            setEmptyText(when {
-                loading -> PackagesSearchBundle.message("ui.list.searching")
-                else -> PackagesSearchBundle.message("ui.list.empty")
-            })
+            setEmptyText(
+                when {
+                    loading -> PackagesSearchBundle.message("ui.list.searching")
+                    else -> PackagesSearchBundle.message("ui.list.empty")
+                }
+            )
         }
         hint.isVisible = visible
 
@@ -273,9 +318,9 @@ class PackagesSearchAction : AnAction(), Disposable, CoroutineScope {
         init {
 //            border = JBEmptyBorder(3)
             border = JBUI.Borders.merge(
-                    JBUI.Borders.empty(5),
-                    JBUI.Borders.customLine(JBColor.GRAY.darker(), 1, 0, 0, 0),
-                    true
+                JBUI.Borders.empty(5),
+                JBUI.Borders.customLine(JBColor.GRAY.darker(), 1, 0, 0, 0),
+                true
             )
 
             add(JBLabel(pkg.name).apply {
@@ -284,23 +329,30 @@ class PackagesSearchAction : AnAction(), Disposable, CoroutineScope {
 
             add(JBLabel(pkg.version).apply {
                 fontColor = UIUtil.FontColor.BRIGHTER
+                font = UIUtil.getFont(UIUtil.FontSize.SMALL, font)
             }, BorderLayout.EAST)
 
             add(JBLabel(pkg.description).apply {
                 border = JBEmptyBorder(3, 0, 0, 0)
                 fontColor = UIUtil.FontColor.BRIGHTER
+                font = UIUtil.getFont(UIUtil.FontSize.SMALL, font)
             }, BorderLayout.SOUTH)
         }
     }
 
-    inner class RegistryFilterPopupAction : AnAction(FindBundle.message("find.popup.show.filter.popup"), "Description", AllIcons.General.MoreTabs) {
+    inner class RegistryFilterPopupAction :
+        AnAction(FindBundle.message("find.popup.show.filter.popup"), "Description", AllIcons.General.MoreTabs) {
         private val switchContextGroup: DefaultActionGroup
 
         init {
-            shortcutSet = CustomShortcutSet(KeyStroke.getKeyStroke(KeyEvent.VK_F, when {
-                SystemInfo.isMac -> InputEvent.CTRL_DOWN_MASK or InputEvent.ALT_DOWN_MASK
-                else -> InputEvent.ALT_DOWN_MASK
-            }))
+            shortcutSet = CustomShortcutSet(
+                KeyStroke.getKeyStroke(
+                    KeyEvent.VK_F, when {
+                        SystemInfo.isMac -> InputEvent.CTRL_DOWN_MASK or InputEvent.ALT_DOWN_MASK
+                        else -> InputEvent.ALT_DOWN_MASK
+                    }
+                )
+            )
 
             switchContextGroup = DefaultActionGroup().apply {
                 isPopup = true
@@ -313,7 +365,8 @@ class PackagesSearchAction : AnAction(), Disposable, CoroutineScope {
         override fun actionPerformed(e: AnActionEvent) {
             if (PlatformDataKeys.CONTEXT_COMPONENT.getData(e.dataContext) == null) return
 
-            val listPopup = JBPopupFactory.getInstance().createActionGroupPopup(null, switchContextGroup, e.dataContext, false, null, 10)
+            val listPopup = JBPopupFactory.getInstance()
+                .createActionGroupPopup(null, switchContextGroup, e.dataContext, false, null, 10)
             listPopup.showUnderneathOf(registryFilterButton)
         }
     }
