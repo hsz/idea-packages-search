@@ -24,7 +24,7 @@ import com.intellij.ui.components.panels.NonOpaquePanel
 import com.intellij.util.ui.JBEmptyBorder
 import com.intellij.util.ui.JBUI
 import com.intellij.util.ui.UIUtil
-import kotlinx.coroutines.experimental.*
+import kotlinx.coroutines.*
 import mobi.hsz.idea.packagessearch.PackagesSearchBundle
 import mobi.hsz.idea.packagessearch.components.PackagesSearchSettings
 import mobi.hsz.idea.packagessearch.models.Package
@@ -39,7 +39,7 @@ import javax.swing.JLabel
 import javax.swing.KeyStroke
 import javax.swing.SwingUtilities
 import javax.swing.event.DocumentEvent
-import kotlin.coroutines.experimental.CoroutineContext
+import kotlin.coroutines.CoroutineContext
 
 class PackagesSearchAction : AnAction(), Disposable, CoroutineScope {
     private lateinit var popup: JBPopup

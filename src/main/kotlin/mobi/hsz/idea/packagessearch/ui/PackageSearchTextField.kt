@@ -23,14 +23,14 @@ class PackageSearchTextField : SearchTextField(false), DataProvider, Disposable 
             isOpaque = false
             putClientProperty("JTextField.Search.noBorderRing", java.lang.Boolean.TRUE)
 
-            when {
+            border = when {
                 SystemInfo.isMac && UIUtil.isUnderIntelliJLaF() -> {
-                    ui = MacIntelliJTextFieldUI.createUI(this) as MacIntelliJTextFieldUI
-                    border = MacIntelliJTextBorder()
+                    setUI(MacIntelliJTextFieldUI.createUI(this) as MacIntelliJTextFieldUI)
+                    MacIntelliJTextBorder()
                 }
                 else -> {
-                    ui = DarculaTextFieldUI.createUI(this) as DarculaTextFieldUI
-                    border = DarculaTextBorder()
+                    setUI(DarculaTextFieldUI.createUI(this) as DarculaTextFieldUI)
+                    DarculaTextBorder()
                 }
             }
 
