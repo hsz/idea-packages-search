@@ -13,18 +13,17 @@ import com.intellij.openapi.actionSystem.DefaultActionGroup
 import com.intellij.openapi.actionSystem.PlatformDataKeys
 import com.intellij.openapi.actionSystem.ToggleAction
 import com.intellij.openapi.actionSystem.impl.ActionButton
-import com.intellij.openapi.application.ApplicationManager
-import com.intellij.openapi.ui.popup.JBPopup
+import com.intellij.openapi.project.DumbAware
 import com.intellij.openapi.ui.popup.JBPopupFactory
 import com.intellij.openapi.util.Comparing
 import com.intellij.openapi.util.Disposer
 import com.intellij.openapi.util.SystemInfo
+import com.intellij.openapi.util.text.StringUtil
 import com.intellij.openapi.wm.IdeFocusManager
 import com.intellij.openapi.wm.WindowManager
 import com.intellij.openapi.wm.impl.IdeFrameImpl
 import com.intellij.ui.ClickListener
 import com.intellij.ui.CollectionListModel
-import com.intellij.ui.DocumentAdapter
 import com.intellij.ui.Gray
 import com.intellij.ui.IdeBorderFactory
 import com.intellij.ui.JBColor
@@ -36,6 +35,10 @@ import com.intellij.ui.components.panels.NonOpaquePanel
 import com.intellij.util.ui.JBEmptyBorder
 import com.intellij.util.ui.JBUI
 import com.intellij.util.ui.UIUtil
+import io.reactivex.disposables.CompositeDisposable
+import io.reactivex.rxkotlin.addTo
+import io.reactivex.subjects.PublishSubject
+import io.reactivex.subjects.Subject
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -44,8 +47,10 @@ import kotlinx.coroutines.launch
 import mobi.hsz.idea.packagessearch.PackagesSearchBundle
 import mobi.hsz.idea.packagessearch.components.PackagesSearchSettings
 import mobi.hsz.idea.packagessearch.models.Package
-import mobi.hsz.idea.packagessearch.ui.PackageSearchTextField
+import mobi.hsz.idea.packagessearch.ui.PackagesSearchList
+import mobi.hsz.idea.packagessearch.ui.PackagesSearchTextField
 import mobi.hsz.idea.packagessearch.utils.ApiService
+import mobi.hsz.idea.packagessearch.utils.Constants
 import mobi.hsz.idea.packagessearch.utils.Constants.Companion.GRADIENT
 import mobi.hsz.idea.packagessearch.utils.RegistryContext
 import java.awt.BorderLayout
@@ -55,23 +60,16 @@ import java.awt.GradientPaint
 import java.awt.Graphics
 import java.awt.Graphics2D
 import java.awt.Point
-import java.awt.event.FocusEvent
-import java.awt.event.FocusListener
 import java.awt.event.InputEvent
-import java.awt.event.KeyAdapter
 import java.awt.event.KeyEvent
 import java.awt.event.MouseEvent
-import java.awt.event.MouseListener
+import java.util.concurrent.TimeUnit
 import javax.swing.JLabel
 import javax.swing.KeyStroke
-import javax.swing.SwingUtilities
-import javax.swing.event.DocumentEvent
 import kotlin.coroutines.CoroutineContext
 
-class PackagesSearchAction : AnAction(), Disposable, CoroutineScope {
-    private lateinit var popup: JBPopup
-    private lateinit var header: NonOpaquePanel
-    private lateinit var packageSearch: PackageSearchTextField
+class PackagesSearchAction : AnAction(), CoroutineScope, Disposable, DumbAware {
+    private lateinit var packagesSearch: PackagesSearchTextField
     private lateinit var registryFilterButton: ActionButton
     private lateinit var settings: PackagesSearchSettings
     private lateinit var currentRegistryLabel: JLabel
@@ -82,107 +80,48 @@ class PackagesSearchAction : AnAction(), Disposable, CoroutineScope {
     private lateinit var baseSize: Dimension
     private val job = Job()
     private var listModel = CollectionListModel<Package>()
-    private var previousData: List<Package>? = null
-    private var previousLoading = false
+
+    private val searchObservable: Subject<String> = PublishSubject.create()
+    private val dataObservable: Subject<List<Package>> = PublishSubject.create()
+    private val stateObservable: Subject<Pair<Boolean, Boolean>> = PublishSubject.create()
+
+    private val disposable = CompositeDisposable()
 
     override val coroutineContext: CoroutineContext
-        get() = Dispatchers.Main + job
+        get() = Dispatchers.Default + job
 
     override fun actionPerformed(e: AnActionEvent) {
-        if (::popup.isInitialized && popup.isVisible && !popup.isDisposed) {
-            return
-        }
-        if (::popup.isInitialized) {
-            Disposer.dispose(popup)
-        }
-
         val project = e.project
         if (project === null) {
             return
         }
 
         settings = PackagesSearchSettings.getInstance(project)
-        packageSearch = PackageSearchTextField().apply {
-            textEditor.apply {
-                document.addDocumentListener(object : DocumentAdapter() {
-                    override fun textChanged(e: DocumentEvent) {
-                        job.cancelChildren()
-                        if (!hasFocus()) {
-                            return
-                        }
-
-                        if (text.isEmpty()) {
-                            rebuildList(visible = false)
-                        } else {
-                            rebuildList(loading = true)
-                            launch(coroutineContext) {
-                                //                                delay(SEARCH_DELAY)
-                                val (result) = ApiService.search(settings.state.registry, text, coroutineContext)
-                                SwingUtilities.invokeLater {
-                                    rebuildList(data = result?.items, loading = false)
-                                }
-                            }
-                        }
-                    }
-                })
-
-                addKeyListener(object : KeyAdapter() {
-                    override fun keyPressed(e: KeyEvent?) {
-                        when (e?.keyCode) {
-                            KeyEvent.VK_UP -> list.selectedIndex = Math.max(list.selectedIndex - 1, 0)
-                            KeyEvent.VK_DOWN -> list.selectedIndex =
-                                Math.min(list.selectedIndex + 1, list.itemsCount - 1)
-                            KeyEvent.VK_TAB -> println("TAB!") // TODO implement -> show package details
-                            KeyEvent.VK_ENTER -> println("ENTER!") // TODO implement -> install package
-                        }
-                    }
-                })
-            }
-        }
-
         focusManager = IdeFocusManager.getInstance(project)
-        focusManager.requestFocus(packageSearch.textEditor, true)
+
+        packagesSearch = PackagesSearchTextField(
+            onTextChange = searchObservable::onNext,
+            onKeyUp = { list.selectedIndex = list.selectedIndex - 1.coerceAtLeast(0) },
+            onKeyDown = { list.selectedIndex = list.selectedIndex + 1.coerceAtMost(list.itemsCount - 1) },
+            onKeyTab = { println("TAB!") }, // TODO implement -> show package details
+            onKeyEnter = { println("ENTER!") } // TODO implement -> install package
+        )
 
         currentRegistryLabel = JLabel(settings.state.registry.toString()).apply {
             border = JBEmptyBorder(0, 10, 0, 10)
             foreground = JBColor(Gray._240, Gray._200)
         }
 
-        list = JBList<Package>(listModel.apply { removeAll() }).apply {
-            isVisible = false
-            installCellRenderer<Package> { pkg -> PackageCell(pkg) }
-            addFocusListener(object : FocusListener {
-                override fun focusLost(e: FocusEvent?) {
-                }
-
-                override fun focusGained(e: FocusEvent?) {
-                    focusManager.requestFocus(packageSearch.textEditor, true)
-                }
-            })
-            addMouseListener(object : MouseListener {
-                override fun mouseReleased(e: MouseEvent?) {
-                }
-
-                override fun mouseEntered(e: MouseEvent?) {
-                }
-
-                override fun mouseExited(e: MouseEvent?) {
-                }
-
-                override fun mousePressed(e: MouseEvent?) {
-                }
-
-                override fun mouseClicked(e: MouseEvent?) {
-                }
-            })
-        }
+        list = PackagesSearchList(
+            model = listModel,
+            onFocus = this::requestSearchFocus
+        )
         hint = JBLabel().apply {
             isVisible = false
             border = IdeBorderFactory.createEmptyBorder(3, 3, 0, 3)
             fontColor = UIUtil.FontColor.BRIGHTER
             font = JBUI.Fonts.smallFont()
-            text =
-                "[Tab] show package details   [Enter] install   [Alt+Enter] open in browser" // TODO use enhance, move to messages
+            text = PackagesSearchBundle.message("ui.hint")
         }
 
         val registryFilterPopupAction = RegistryFilterPopupAction()
@@ -208,7 +147,8 @@ class PackagesSearchAction : AnAction(), Disposable, CoroutineScope {
             isOpaque = false
         }
 
-        header = NonOpaquePanel(BorderLayout()).apply {
+        // Header Panel: [Popup title, Current registry], [Registry filter, Settings]
+        val header = NonOpaquePanel(BorderLayout()).apply {
             add(NonOpaquePanel(BorderLayout()).apply {
                 add(title, BorderLayout.WEST)
                 add(currentRegistryLabel, BorderLayout.EAST)
@@ -221,7 +161,7 @@ class PackagesSearchAction : AnAction(), Disposable, CoroutineScope {
 
         panel = object : JBPanel<JBPanel<*>>(BorderLayout()) {
             override fun paintComponent(g: Graphics) {
-                getGradientColors().apply {
+                GRADIENT.apply {
                     (g as Graphics2D).paint = GradientPaint(0f, 0f, startColor, 0f, height.toFloat(), endColor)
                 }
                 g.fillRect(0, 0, width, height)
@@ -230,7 +170,7 @@ class PackagesSearchAction : AnAction(), Disposable, CoroutineScope {
             border = IdeBorderFactory.createEmptyBorder(3, 5, 4, 5)
 
             add(header, BorderLayout.NORTH)
-            add(packageSearch, BorderLayout.CENTER)
+            add(packagesSearch, BorderLayout.CENTER)
             add(NonOpaquePanel(BorderLayout()).apply {
                 add(list, BorderLayout.NORTH)
                 add(hint, BorderLayout.SOUTH)
@@ -250,8 +190,8 @@ class PackagesSearchAction : AnAction(), Disposable, CoroutineScope {
             else -> JBPopupFactory.getInstance().guessBestPopupLocation(e.dataContext)
         }
 
-        val builder = JBPopupFactory.getInstance().createComponentPopupBuilder(panel, packageSearch.textEditor)
-        popup = builder
+        val builder = JBPopupFactory.getInstance().createComponentPopupBuilder(panel, packagesSearch.textEditor)
+        val popup = builder
             .setCancelOnClickOutside(true)
             .setModalContext(false)
             .setRequestFocus(true)
@@ -259,86 +199,74 @@ class PackagesSearchAction : AnAction(), Disposable, CoroutineScope {
             .createPopup().apply {
                 content.border = JBUI.Borders.empty()
                 show(showPoint)
+                Disposer.register(this, this@PackagesSearchAction)
             }
 
         baseSize = panel.size
         registryFilterPopupAction.registerCustomShortcutSet(CustomShortcutSet.fromString("alt P"), panel, popup)
+
+
+        searchObservable.map(StringUtil::isNotEmpty).subscribe {
+            job.cancelChildren()
+            listModel.removeAll()
+            when {
+                it -> stateObservable.onNext(Pair(false, true))
+                else -> stateObservable.onNext(Pair(true, false))
+            }
+        }.addTo(disposable)
+
+        searchObservable.debounce(Constants.SEARCH_DELAY, TimeUnit.MILLISECONDS).filter(StringUtil::isNotEmpty)
+            .subscribe {
+                launch(coroutineContext) {
+                    val (result) = ApiService.search(settings.state.registry, it, coroutineContext)
+                    dataObservable.onNext(result!!.items)
+                }
+            }.addTo(disposable)
+
+        dataObservable.subscribe {
+            listModel.add(it)
+            stateObservable.onNext(Pair(false, false))
+        }.addTo(disposable)
+
+        stateObservable.subscribe { (initial, loading) ->
+            hint.isVisible = !initial
+
+            list.apply {
+                isVisible = !initial
+                selectedIndex = 0
+                setPaintBusy(!initial && loading)
+                setEmptyText(
+                    when {
+                        loading -> PackagesSearchBundle.message("ui.list.searching")
+                        else -> PackagesSearchBundle.message("ui.list.empty")
+                    }
+                )
+            }
+
+            val listHeight = when {
+                initial -> 0
+                else -> list.preferredSize.height + hint.preferredSize.height
+            }
+            popup.size = Dimension(baseSize.width, baseSize.height + listHeight)
+        }
+    }
+
+    private fun requestSearchFocus() {
+        focusManager.requestFocus(packagesSearch.textEditor, true)
     }
 
     override fun dispose() {
-        Disposer.dispose(packageSearch)
-        job.cancel()
-    }
-
-    private fun rebuildList(data: List<Package>? = null, visible: Boolean = true, loading: Boolean = false) {
-        ApplicationManager.getApplication().assertIsDispatchThread()
-
-        if (data === previousData && visible == list.isVisible && loading == previousLoading) {
-            return
-        }
-
-        previousData = data
-        previousLoading = loading
-        if (data === null) {
-            listModel.removeAll()
-        } else {
-            listModel.replaceAll(data)
-        }
-
-        list.apply {
-            isVisible = visible
-            selectedIndex = 0
-            setPaintBusy(loading)
-            setEmptyText(
-                when {
-                    loading -> PackagesSearchBundle.message("ui.list.searching")
-                    else -> PackagesSearchBundle.message("ui.list.empty")
-                }
-            )
-        }
-        hint.isVisible = visible
-
-        val listHeight = when (visible) {
-            true -> list.preferredSize.height + hint.preferredSize.height
-            false -> 0
-        }
-        popup.size = Dimension(baseSize.width, baseSize.height + listHeight)
+        job.cancelChildren()
+        Disposer.dispose(packagesSearch)
+        disposable.clear()
     }
 
     private fun registryChanged() {
         currentRegistryLabel.text = settings.state.registry.toString()
-        focusManager.requestFocus(packageSearch.textEditor, true)
+        requestSearchFocus()
     }
 
     private fun openSettings() = println("openSettings")
-
-    private fun getGradientColors() = GRADIENT
-
-    inner class PackageCell(pkg: Package) : NonOpaquePanel(BorderLayout()) {
-        init {
-//            border = JBEmptyBorder(3)
-            border = JBUI.Borders.merge(
-                JBUI.Borders.empty(5),
-                JBUI.Borders.customLine(JBColor.GRAY.darker(), 1, 0, 0, 0),
-                true
-            )
-
-            add(JBLabel(pkg.name).apply {
-                font = JBUI.Fonts.label().asBold()
-            }, BorderLayout.WEST)
-
-            add(JBLabel(pkg.version).apply {
-                fontColor = UIUtil.FontColor.BRIGHTER
-                font = UIUtil.getFont(UIUtil.FontSize.SMALL, font)
-            }, BorderLayout.EAST)
-
-            add(JBLabel(pkg.description).apply {
-                border = JBEmptyBorder(3, 0, 0, 0)
-                fontColor = UIUtil.FontColor.BRIGHTER
-                font = UIUtil.getFont(UIUtil.FontSize.SMALL, font)
-            }, BorderLayout.SOUTH)
-        }
-    }
 
     inner class RegistryFilterPopupAction :
         AnAction(FindBundle.message("find.popup.show.filter.popup"), "Description", AllIcons.General.MoreTabs) {

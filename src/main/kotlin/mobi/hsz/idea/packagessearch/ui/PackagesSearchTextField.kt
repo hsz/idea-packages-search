@@ -9,27 +9,41 @@ import com.intellij.openapi.Disposable
 import com.intellij.openapi.actionSystem.DataProvider
 import com.intellij.openapi.actionSystem.PlatformDataKeys
 import com.intellij.openapi.util.SystemInfo
+import com.intellij.ui.DocumentAdapter
 import com.intellij.ui.Gray
 import com.intellij.ui.SearchTextField
 import com.intellij.util.ui.UIUtil
 import org.jetbrains.annotations.NonNls
+import java.awt.KeyboardFocusManager
+import java.awt.event.KeyAdapter
+import java.awt.event.KeyEvent
+import java.util.Collections
+import javax.swing.event.DocumentEvent
 
-class PackageSearchTextField : SearchTextField(false), DataProvider, Disposable {
+class PackagesSearchTextField(
+    var onTextChange: (text: String) -> Unit,
+    var onKeyUp: () -> Unit,
+    var onKeyDown: () -> Unit,
+    var onKeyTab: () -> Unit,
+    var onKeyEnter: () -> Unit
+) : SearchTextField(false), DataProvider, Disposable {
     init {
         isOpaque = false
 
         textEditor.apply {
+            setFocusTraversalKeys(KeyboardFocusManager.FORWARD_TRAVERSAL_KEYS, Collections.emptySet())
+
             columns = SearchEverywhereAction.SEARCH_FIELD_COLUMNS
             isOpaque = false
             putClientProperty("JTextField.Search.noBorderRing", java.lang.Boolean.TRUE)
 
             border = when {
                 SystemInfo.isMac && UIUtil.isUnderIntelliJLaF() -> {
-                    setUI(MacIntelliJTextFieldUI.createUI(this) as MacIntelliJTextFieldUI)
+                    ui = MacIntelliJTextFieldUI.createUI(this) as MacIntelliJTextFieldUI
                     MacIntelliJTextBorder()
                 }
                 else -> {
-                    setUI(DarculaTextFieldUI.createUI(this) as DarculaTextFieldUI)
+                    ui = DarculaTextFieldUI.createUI(this) as DarculaTextFieldUI
                     DarculaTextBorder()
                 }
             }
@@ -38,6 +52,25 @@ class PackageSearchTextField : SearchTextField(false), DataProvider, Disposable 
                 background = Gray._45
                 foreground = Gray._240
             }
+
+            document.addDocumentListener(object : DocumentAdapter() {
+                override fun textChanged(e: DocumentEvent) {
+                    when {
+                        hasFocus() -> onTextChange(text)
+                    }
+                }
+            })
+
+            addKeyListener(object : KeyAdapter() {
+                override fun keyPressed(e: KeyEvent?) {
+                    when (e?.keyCode) {
+                        KeyEvent.VK_UP -> onKeyUp()
+                        KeyEvent.VK_DOWN -> onKeyDown()
+                        KeyEvent.VK_TAB -> onKeyTab()
+                        KeyEvent.VK_ENTER -> onKeyEnter()
+                    }
+                }
+            })
         }
     }
 
