@@ -10,8 +10,8 @@ import mobi.hsz.idea.packagessearch.utils.RegistryContext
 @State(name = "PackagesSearchSettings", storages = [Storage("packagesSearch.xml")])
 class PackagesSearchSettings : PersistentStateComponent<PackagesSearchSettings.State> {
     data class State(
-            var version: String? = null,
-            var registry: RegistryContext = RegistryContext.NPM
+        var version: String? = null,
+        var registry: RegistryContext = RegistryContext.NPM
     )
 
     private var state = State()

@@ -3,9 +3,9 @@ package mobi.hsz.idea.packagessearch.models.NPM
 import mobi.hsz.idea.packagessearch.models.Package
 
 data class NpmPackage(
-        val `package`: PackageLeaf,
-        val score: Score,
-        val searchScore: Float
+    val `package`: PackageLeaf,
+    val score: Score,
+    val searchScore: Float
 ) : Package {
     override val name: String
         get() = `package`.name
@@ -16,11 +16,11 @@ data class NpmPackage(
 }
 
 data class PackageLeaf(
-        val name: String,
-        val scope: String,
-        val version: String,
-        val description: String,
-        val date: String
+    val name: String,
+    val scope: String,
+    val version: String,
+    val description: String,
+    val date: String
 //    val links: String,
 //    val author: String,
 //    val publisher: String,
@@ -28,7 +28,7 @@ data class PackageLeaf(
 )
 
 class Score(
-        val final: Float
+    val final: Float
 //        val detail: asd
 )
 

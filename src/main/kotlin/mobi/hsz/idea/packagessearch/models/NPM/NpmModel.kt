@@ -8,5 +8,5 @@ class NpmModel : Model<NpmPackage>() {
     override fun url(query: String) = "https://registry.npmjs.org/-/v1/search?text=$query&size=10"
 
     override fun deserializer(): ResponseDeserializable<Response<NpmPackage>> =
-            Deserializer(NpmResponse::class.java)
+        Deserializer(NpmResponse::class.java)
 }

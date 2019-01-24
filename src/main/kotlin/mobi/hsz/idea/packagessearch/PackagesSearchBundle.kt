@@ -2,7 +2,7 @@ package mobi.hsz.idea.packagessearch
 
 import com.intellij.CommonBundle
 import org.jetbrains.annotations.PropertyKey
-import java.util.*
+import java.util.ResourceBundle
 
 object PackagesSearchBundle {
     private const val BUNDLE_NAME = "messages.PackagesSearchBundle"

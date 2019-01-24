@@ -7,7 +7,7 @@ import mobi.hsz.idea.packagessearch.models.Packagist.PackagistModel
 enum class RegistryContext {
     MAVEN, NPM, PACKAGIST, PYPI;
 
-    fun model() = when(this) {
+    fun model() = when (this) {
         MAVEN -> NpmModel()
         NPM -> NpmModel()
         PACKAGIST -> PackagistModel()

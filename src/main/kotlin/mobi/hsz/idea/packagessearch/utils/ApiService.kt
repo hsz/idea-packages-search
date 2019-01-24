@@ -1,6 +1,6 @@
 package mobi.hsz.idea.packagessearch.utils
 
-import awaitObjectResponse
+import com.github.kittinunf.fuel.coroutines.awaitObjectResponse
 import com.github.kittinunf.fuel.httpGet
 import kotlin.coroutines.CoroutineContext
 

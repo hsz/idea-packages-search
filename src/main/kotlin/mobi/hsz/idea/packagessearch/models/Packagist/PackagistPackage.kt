@@ -5,9 +5,9 @@ import mobi.hsz.idea.packagessearch.models.NPM.Score
 import mobi.hsz.idea.packagessearch.models.Package
 
 data class PackagistPackage(
-        val `package`: PackageLeaf,
-        val score: Score,
-        val searchScore: Float
+    val `package`: PackageLeaf,
+    val score: Score,
+    val searchScore: Float
 ) : Package {
     override val name: String
         get() = `package`.name

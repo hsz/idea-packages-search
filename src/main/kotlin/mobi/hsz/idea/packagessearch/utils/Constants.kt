@@ -8,8 +8,8 @@ class Constants {
         internal const val API_ENDPOINT = "https://api.nodesecurity.io"
         internal const val SEARCH_DELAY = 50L
         internal val GRADIENT = Gradient(
-                JBColor(0x95C083, 0x455C3F),
-                JBColor(0x76BB75, 0x365735)
+            JBColor(0x95C083, 0x455C3F),
+            JBColor(0x76BB75, 0x365735)
         )
     }
 }
