@@ -1,7 +1,7 @@
-package mobi.hsz.idea.packagessearch.models.Packagist
+package mobi.hsz.idea.packagessearch.models.packagist
 
-import mobi.hsz.idea.packagessearch.models.NPM.PackageLeaf
-import mobi.hsz.idea.packagessearch.models.NPM.Score
+import mobi.hsz.idea.packagessearch.models.npm.PackageLeaf
+import mobi.hsz.idea.packagessearch.models.npm.Score
 import mobi.hsz.idea.packagessearch.models.Package
 
 data class PackagistPackage(

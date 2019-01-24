@@ -1,4 +1,4 @@
-package mobi.hsz.idea.packagessearch.models.NPM
+package mobi.hsz.idea.packagessearch.models.npm
 
 import mobi.hsz.idea.packagessearch.models.Response
 

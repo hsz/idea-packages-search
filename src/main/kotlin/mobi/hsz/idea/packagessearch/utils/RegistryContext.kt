@@ -1,8 +1,8 @@
 package mobi.hsz.idea.packagessearch.utils
 
 import mobi.hsz.idea.packagessearch.PackagesSearchBundle
-import mobi.hsz.idea.packagessearch.models.NPM.NpmModel
-import mobi.hsz.idea.packagessearch.models.Packagist.PackagistModel
+import mobi.hsz.idea.packagessearch.models.npm.NpmModel
+import mobi.hsz.idea.packagessearch.models.packagist.PackagistModel
 
 enum class RegistryContext {
     MAVEN, NPM, PACKAGIST, PYPI;

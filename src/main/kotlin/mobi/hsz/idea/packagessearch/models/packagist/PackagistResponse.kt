@@ -1,4 +1,4 @@
-package mobi.hsz.idea.packagessearch.models.Packagist
+package mobi.hsz.idea.packagessearch.models.packagist
 
 import mobi.hsz.idea.packagessearch.models.Response
 
