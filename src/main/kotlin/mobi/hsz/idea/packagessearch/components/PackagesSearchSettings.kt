@@ -6,6 +6,8 @@ import com.intellij.openapi.components.State
 import com.intellij.openapi.components.Storage
 import com.intellij.openapi.project.Project
 import mobi.hsz.idea.packagessearch.utils.RegistryContext
+import mobi.hsz.idea.packagessearch.utils.RxBus
+import mobi.hsz.idea.packagessearch.utils.events.RegistryChangedEvent
 
 @State(name = "PackagesSearchSettings", storages = [Storage("packagesSearch.xml")])
 class PackagesSearchSettings : PersistentStateComponent<PackagesSearchSettings.State> {
@@ -16,6 +18,12 @@ class PackagesSearchSettings : PersistentStateComponent<PackagesSearchSettings.S
 
     private var state = State()
 
+    init {
+        RxBus.listen(RegistryChangedEvent::class.java).subscribe {
+            state.registry = it.context
+        }
+    }
+
     override fun getState() = state
 
     override fun loadState(state: State) {
@@ -23,6 +31,6 @@ class PackagesSearchSettings : PersistentStateComponent<PackagesSearchSettings.S
     }
 
     companion object {
-        fun getInstance(project: Project) = ServiceManager.getService(project, PackagesSearchSettings::class.java)
+        fun getInstance(project: Project) = ServiceManager.getService(project, PackagesSearchSettings::class.java)!!
     }
 }
