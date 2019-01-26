@@ -21,7 +21,6 @@ import com.intellij.ui.Gray
 import com.intellij.ui.IdeBorderFactory
 import com.intellij.ui.JBColor
 import com.intellij.ui.awt.RelativePoint
-import com.intellij.ui.components.JBLabel
 import com.intellij.ui.components.JBPanel
 import com.intellij.ui.components.panels.NonOpaquePanel
 import com.intellij.util.ui.JBEmptyBorder
@@ -117,14 +116,6 @@ class PackagesSearchPanel(
         }.installOn(this)
     }
 
-    private val hint = JBLabel().apply {
-        isVisible = false
-        border = IdeBorderFactory.createEmptyBorder(3, 3, 0, 3)
-        fontColor = UIUtil.FontColor.BRIGHTER
-        font = JBUI.Fonts.smallFont()
-        text = PackagesSearchBundle.message("ui.hint")
-    }
-
     override val coroutineContext: CoroutineContext
         get() = Dispatchers.Default + job
 
@@ -162,7 +153,7 @@ class PackagesSearchPanel(
         add(packagesSearch, BorderLayout.CENTER)
         add(NonOpaquePanel(BorderLayout()).apply {
             add(list, BorderLayout.NORTH)
-            add(hint, BorderLayout.SOUTH)
+            add(Hints(), BorderLayout.SOUTH)
         }, BorderLayout.SOUTH)
 
         val window = WindowManager.getInstance().suggestParentWindow(project)
@@ -214,8 +205,6 @@ class PackagesSearchPanel(
         }
 
         stateObservable.subscribe { (initial, loading) ->
-            hint.isVisible = !initial
-
             list.apply {
                 isVisible = !initial
                 selectedIndex = 0
@@ -230,7 +219,7 @@ class PackagesSearchPanel(
 
             val listHeight = when {
                 initial -> 0
-                else -> list.preferredSize.height + hint.preferredSize.height
+                else -> list.preferredSize.height
             }
             popup.size = Dimension(initialSize.width, initialSize.height + listHeight)
         }
