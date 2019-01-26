@@ -10,7 +10,6 @@ import com.intellij.openapi.actionSystem.DataContext
 import com.intellij.openapi.actionSystem.impl.ActionButton
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.ui.popup.JBPopupFactory
-import com.intellij.openapi.util.Disposer
 import com.intellij.openapi.util.text.StringUtil
 import com.intellij.openapi.wm.IdeFocusManager
 import com.intellij.openapi.wm.WindowManager
@@ -24,7 +23,6 @@ import com.intellij.ui.awt.RelativePoint
 import com.intellij.ui.components.JBPanel
 import com.intellij.ui.components.panels.NonOpaquePanel
 import com.intellij.util.ui.JBEmptyBorder
-import com.intellij.util.ui.JBUI
 import com.intellij.util.ui.UIUtil
 import io.reactivex.disposables.CompositeDisposable
 import io.reactivex.rxkotlin.addTo
@@ -57,8 +55,7 @@ import javax.swing.JLabel
 import kotlin.coroutines.CoroutineContext
 
 class PackagesSearchPanel(
-    project: Project,
-    dataContext: DataContext
+    project: Project
 ) : JBPanel<JBPanel<*>>(BorderLayout()), CoroutineScope, Disposable {
     /** Enhanced ListModel containing current fetched [Package] entities. */
     private val listModel = CollectionListModel<Package>()
@@ -66,6 +63,7 @@ class PackagesSearchPanel(
     /** List component displayed in the center of popup. */
     private val list = PackagesSearchList(listModel)
 
+    /** Rx disposable container. */
     private val disposable = CompositeDisposable()
 
     private val job = Job()
@@ -73,6 +71,7 @@ class PackagesSearchPanel(
     private val dataObservable: Subject<List<Package>> = PublishSubject.create()
     private val stateObservable: Subject<Pair<Boolean, Boolean>> = PublishSubject.create()
 
+    /** Initial component size. */
     private var initialSize: Dimension
 
     private lateinit var registry: RegistryContext
@@ -116,6 +115,14 @@ class PackagesSearchPanel(
         }.installOn(this)
     }
 
+    private val packagesSearch = PackagesSearchTextField(
+        onTextChange = searchObservable::onNext,
+        onKeyUp = { list.selectedIndex = list.selectedIndex - 1.coerceAtLeast(0) },
+        onKeyDown = { list.selectedIndex = list.selectedIndex + 1.coerceAtMost(list.itemsCount - 1) },
+        onKeyTab = { println("TAB!") }, // TODO implement -> show package details
+        onKeyEnter = { println("ENTER!") } // TODO implement -> install package
+    )
+
     override val coroutineContext: CoroutineContext
         get() = Dispatchers.Default + job
 
@@ -141,44 +148,12 @@ class PackagesSearchPanel(
             }, BorderLayout.EAST)
         }
 
-        val packagesSearch = PackagesSearchTextField(
-            onTextChange = searchObservable::onNext,
-            onKeyUp = { list.selectedIndex = list.selectedIndex - 1.coerceAtLeast(0) },
-            onKeyDown = { list.selectedIndex = list.selectedIndex + 1.coerceAtMost(list.itemsCount - 1) },
-            onKeyTab = { println("TAB!") }, // TODO implement -> show package details
-            onKeyEnter = { println("ENTER!") } // TODO implement -> install package
-        )
-
         add(header, BorderLayout.NORTH)
         add(packagesSearch, BorderLayout.CENTER)
         add(NonOpaquePanel(BorderLayout()).apply {
             add(list, BorderLayout.NORTH)
             add(Hints(), BorderLayout.SOUTH)
         }, BorderLayout.SOUTH)
-
-        val window = WindowManager.getInstance().suggestParentWindow(project)
-        val parent = UIUtil.findUltimateParent(window)
-        val showPoint: RelativePoint = when {
-            parent != null -> {
-                var height = if (UISettings.instance.showMainToolbar) 135 else 115
-                if (parent is IdeFrameImpl && parent.isInFullScreen) {
-                    height -= 20
-                }
-                RelativePoint(parent, Point((parent.size.width - preferredSize.width) / 2, height))
-            }
-            else -> JBPopupFactory.getInstance().guessBestPopupLocation(dataContext)
-        }
-
-        val builder = JBPopupFactory.getInstance().createComponentPopupBuilder(this, packagesSearch.textEditor)
-        val popup = builder
-            .setCancelOnClickOutside(true)
-            .setModalContext(false)
-            .setRequestFocus(true)
-            .setCancelCallback { true }
-            .createPopup().apply {
-                content.border = JBUI.Borders.empty()
-                show(showPoint)
-            }
 
         initialSize = size
 
@@ -221,14 +196,12 @@ class PackagesSearchPanel(
                 initial -> 0
                 else -> list.preferredSize.height
             }
-            popup.size = Dimension(initialSize.width, initialSize.height + listHeight)
+            size = Dimension(initialSize.width, initialSize.height + listHeight)
         }
 
         RxBus.listen(RequestSearchFocusEvent::class.java).subscribe {
             IdeFocusManager.getInstance(project).requestFocus(packagesSearch.textEditor, true)
         }
-
-        Disposer.register(popup, this)
     }
 
     override fun paintComponent(g: Graphics) {
@@ -239,6 +212,24 @@ class PackagesSearchPanel(
     }
 
     private fun openSettings() = println("openSettings")
+
+    fun getPreferableFocusComponent() = packagesSearch.textEditor!!
+
+    fun getShowPoint(project: Project, dataContext: DataContext): RelativePoint {
+        val window = WindowManager.getInstance().suggestParentWindow(project)
+        val parent = UIUtil.findUltimateParent(window)
+
+        return when {
+            parent != null -> {
+                var height = if (UISettings.instance.showMainToolbar) 135 else 115
+                if (parent is IdeFrameImpl && parent.isInFullScreen) {
+                    height -= 20
+                }
+                RelativePoint(parent, Point((parent.size.width - preferredSize.width) / 2, height))
+            }
+            else -> JBPopupFactory.getInstance().guessBestPopupLocation(dataContext)
+        }
+    }
 
     override fun dispose() {
         registryFilterPopupAction.dispose()
