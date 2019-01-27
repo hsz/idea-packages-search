@@ -54,9 +54,7 @@ import java.util.concurrent.TimeUnit
 import javax.swing.JLabel
 import kotlin.coroutines.CoroutineContext
 
-class PackagesSearchPanel(
-    project: Project
-) : JBPanel<JBPanel<*>>(BorderLayout()), CoroutineScope, Disposable {
+abstract class PackagesSearchPanel(project: Project) : JBPanel<JBPanel<*>>(BorderLayout()), CoroutineScope, Disposable {
     /** Enhanced ListModel containing current fetched [Package] entities. */
     private val listModel = CollectionListModel<Package>()
 
@@ -119,7 +117,7 @@ class PackagesSearchPanel(
         onTextChange = searchObservable::onNext,
         onKeyUp = { list.selectedIndex = list.selectedIndex - 1.coerceAtLeast(0) },
         onKeyDown = { list.selectedIndex = list.selectedIndex + 1.coerceAtMost(list.itemsCount - 1) },
-        onKeyTab = { println("TAB!") }, // TODO implement -> show package details
+        onKeyTab = { onDetailsShow(list.selectedValue) },
         onKeyEnter = { println("ENTER!") } // TODO implement -> install package
     )
 
@@ -235,4 +233,6 @@ class PackagesSearchPanel(
         registryFilterPopupAction.dispose()
         disposable.clear()
     }
+
+    abstract fun onDetailsShow(pkg: Package)
 }
