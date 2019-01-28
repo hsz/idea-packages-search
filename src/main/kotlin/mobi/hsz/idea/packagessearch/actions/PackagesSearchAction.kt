@@ -9,7 +9,6 @@ import com.intellij.openapi.util.Disposer
 import com.intellij.ui.awt.RelativePoint
 import com.intellij.util.ui.JBUI
 import mobi.hsz.idea.packagessearch.components.PackagesSearchSettings
-import mobi.hsz.idea.packagessearch.models.Package
 import mobi.hsz.idea.packagessearch.ui.PackageDetails
 import mobi.hsz.idea.packagessearch.ui.PackagesSearchPanel
 import mobi.hsz.idea.packagessearch.utils.RxBus
@@ -24,8 +23,9 @@ class PackagesSearchAction : AnAction(), DumbAware {
         }
 
         val settings = PackagesSearchSettings.getInstance(project)
-        val panel = object : PackagesSearchPanel(project) {
-            override fun onDetailsShow(pkg: Package) {
+        val panel = PackagesSearchPanel(
+            project,
+            onDetailsShow = {
                 val detailsComponent = PackageDetails(null)
                 val hint = JBPopupFactory.getInstance().createComponentPopupBuilder(detailsComponent, null)
                     .setProject(project)
@@ -36,9 +36,11 @@ class PackagesSearchAction : AnAction(), DumbAware {
                     .setTitle("designer.properties.javadoc.title")
                     .createPopup()
 
+                println(it.name)
+
                 hint.show(RelativePoint(this, Point(0, 0)))
             }
-        }
+        )
 
         val showPoint = panel.getShowPoint(project, e.dataContext)
         val popup = JBPopupFactory.getInstance().createComponentPopupBuilder(panel, panel.getPreferableFocusComponent())

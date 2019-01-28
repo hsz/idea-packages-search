@@ -54,7 +54,10 @@ import java.util.concurrent.TimeUnit
 import javax.swing.JLabel
 import kotlin.coroutines.CoroutineContext
 
-abstract class PackagesSearchPanel(project: Project) : JBPanel<JBPanel<*>>(BorderLayout()), CoroutineScope, Disposable {
+class PackagesSearchPanel(
+    project: Project,
+    var onDetailsShow: PackagesSearchPanel.(pkg: Package) -> Unit
+) : JBPanel<JBPanel<*>>(BorderLayout()), CoroutineScope, Disposable {
     /** Enhanced ListModel containing current fetched [Package] entities. */
     private val listModel = CollectionListModel<Package>()
 
@@ -233,6 +236,4 @@ abstract class PackagesSearchPanel(project: Project) : JBPanel<JBPanel<*>>(Borde
         registryFilterPopupAction.dispose()
         disposable.clear()
     }
-
-    abstract fun onDetailsShow(pkg: Package)
 }
