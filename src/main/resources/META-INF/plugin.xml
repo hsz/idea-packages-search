@@ -31,11 +31,12 @@
     <change-notes><![CDATA[
 
         <a href="https://github.com/hsz/idea-packages-search/blob/master/CHANGELOG.md"><b>Full Changelog History</b></a>
+        <a href="https://github.com/hsz/idea-packages-search/blob/master/CHANGELOG.md"><b>Full Changelog History</b></a>
 
     ]]>
     </change-notes>
 
-    <idea-version since-build="171.4694.73"/>
+    <idea-version since-build="191.0.0"/>
 
     <extensions defaultExtensionNs="com.intellij">
 
@@ -44,15 +45,13 @@
                 serviceImplementation="mobi.hsz.idea.packagessearch.components.PackagesSearchSettings"
         />
 
-    </extensions>
+        <projectService
+                serviceImplementation="mobi.hsz.idea.packagessearch.searcheverywhere.PackagesSearchEverywhereConfiguration"
+        />
 
-    <actions>
-        <action
-                id="PackagesSearch"
-                class="mobi.hsz.idea.packagessearch.actions.PackagesSearchAction"
-                icon="AllIcons.Actions.Find"
-        >
-            <keyboard-shortcut first-keystroke="alt p" keymap="$default"/>
-        </action>
-    </actions>
+        <searchEverywhereContributor
+                implementation="mobi.hsz.idea.packagessearch.searcheverywhere.PackagesSearchEverywhereContributor$Factory"
+        />
+
+    </extensions>
 </idea-plugin>
