@@ -1,25 +1,24 @@
 package mobi.hsz.idea.packagessearch.searcheverywhere
 
-import com.github.kittinunf.result.Result
+import com.github.kittinunf.result.success
 import com.intellij.ide.actions.searcheverywhere.PersistentSearchEverywhereContributorFilter
 import com.intellij.ide.actions.searcheverywhere.SearchEverywhereContributor
 import com.intellij.ide.actions.searcheverywhere.SearchEverywhereContributorFactory
 import com.intellij.ide.actions.searcheverywhere.SearchEverywhereContributorFilter
 import com.intellij.openapi.actionSystem.AnActionEvent
 import com.intellij.openapi.progress.ProgressIndicator
-import com.intellij.openapi.progress.util.ProgressIndicatorUtils
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.util.text.StringUtil
 import com.intellij.ui.JBColor
 import com.intellij.ui.components.JBLabel
+import com.intellij.util.TimeoutUtil
 import com.intellij.util.ui.JBEmptyBorder
 import com.intellij.util.ui.JBUI
 import com.intellij.util.ui.UIUtil
-import io.reactivex.subjects.PublishSubject
-import io.reactivex.subjects.Subject
 import mobi.hsz.idea.packagessearch.PackagesSearchBundle
 import mobi.hsz.idea.packagessearch.models.Package
 import mobi.hsz.idea.packagessearch.utils.ApiService
+import mobi.hsz.idea.packagessearch.utils.Constants
 import mobi.hsz.idea.packagessearch.utils.RegistryContext
 import org.jetbrains.annotations.NotNull
 import java.awt.BorderLayout
@@ -33,13 +32,35 @@ class PackagesSearchEverywhereContributor(
     private val project: Project?
 ) : SearchEverywhereContributor<RegistryContext> {
 
-    private val searchObservable: Subject<String> = PublishSubject.create()
+    private var query = ""
+
+    override fun fetchElements(
+        pattern: String,
+        everywhere: Boolean,
+        filter: SearchEverywhereContributorFilter<RegistryContext>?,
+        progressIndicator: ProgressIndicator,
+        consumer: Function<Any, Boolean>
+    ) {
+        if (progressIndicator.isCanceled) {
+            return
+        }
+
+        query = pattern
+        TimeoutUtil.sleep(Constants.SEARCH_DELAY)
+        if (query == pattern) {
+            ApiService.search(RegistryContext.NPM, pattern).success {
+                it.items.forEach { pkg -> consumer.apply(pkg) }
+            }
+        }
+    }
 
     override fun getAdvertisement() = PackagesSearchBundle.message("searchEverywhere.advertisement")
 
     override fun getDataForItem(@NotNull element: Any, @NotNull dataId: String): Nothing? = null
 
     override fun getElementsRenderer(list: JList<*>): ListCellRenderer<*> = PackageRenderer(project)
+
+    override fun getFullGroupName() = "Packages Search"
 
     override fun getGroupName() = PackagesSearchBundle.message("searchEverywhere.groupName")
 
@@ -52,46 +73,6 @@ class PackagesSearchEverywhereContributor(
     override fun isShownInSeparateTab() = true
 
     override fun showInFindResults() = false
-
-    override fun getFullGroupName() = "Packages Search"
-
-    // unchecked
-
-    override fun fetchElements(
-        pattern: String,
-        everywhere: Boolean,
-        filter: SearchEverywhereContributorFilter<RegistryContext>?,
-        progressIndicator: ProgressIndicator,
-        consumer: Function<Any, Boolean>
-    ) {
-//        job.cancelChildren()
-
-//        searchObservable.onNext(pattern)
-
-        ProgressIndicatorUtils.yieldToPendingWriteActions()
-        ProgressIndicatorUtils.runInReadActionWithWriteActionPriority({
-            if (progressIndicator.isCanceled) {
-                return@runInReadActionWithWriteActionPriority
-            }
-
-            // TODO run with debounce
-            val result = ApiService.search(RegistryContext.NPM, pattern)
-            (result as Result.Success).value.items.forEach {
-                consumer.apply(it)
-            }
-
-            progressIndicator.stop()
-        }, progressIndicator)
-
-//        ProgressIndicatorUtils.yieldToPendingWriteActions()
-//        ProgressIndicatorUtils.runInReadActionWithWriteActionPriority(
-//            {
-//            }, progressIndicator
-//        )
-
-//        consumer.apply("")
-//        fill(pattern, consumer)
-    }
 
     override fun processSelectedItem(@NotNull selected: Any, modifiers: Int, @NotNull text: String): Boolean {
         return false
@@ -145,7 +126,6 @@ class PackagesSearchEverywhereContributor(
             selected: Boolean,
             hasFocus: Boolean
         ) = cell.withData(value as Package, selected)
-
     }
 
     class Factory : SearchEverywhereContributorFactory<RegistryContext> {
