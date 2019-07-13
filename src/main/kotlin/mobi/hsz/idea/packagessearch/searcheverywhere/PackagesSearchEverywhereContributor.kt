@@ -86,7 +86,7 @@ class PackagesSearchEverywhereContributor(
 
             init {
                 border = JBUI.Borders.merge(
-                    JBUI.Borders.empty(5, 25, 5, 5),
+                    JBUI.Borders.empty(5, 25, 5, 15),
                     JBUI.Borders.customLine(JBColor.GRAY.darker(), 0, 0, 1, 0),
                     true
                 )
