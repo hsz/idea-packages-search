@@ -60,7 +60,7 @@ class PackagesSearchEverywhereContributor(
 
     override fun getElementsRenderer(list: JList<*>): ListCellRenderer<*> = PackageRenderer(project)
 
-    override fun getFullGroupName() = "Packages Search"
+    override fun getFullGroupName() = PackagesSearchBundle.message("searchEverywhere.fullGroupName")
 
     override fun getGroupName() = PackagesSearchBundle.message("searchEverywhere.groupName")
 
@@ -86,7 +86,7 @@ class PackagesSearchEverywhereContributor(
 
             init {
                 border = JBUI.Borders.merge(
-                    JBUI.Borders.empty(5),
+                    JBUI.Borders.empty(5, 25, 5, 5),
                     JBUI.Borders.customLine(JBColor.GRAY.darker(), 0, 0, 1, 0),
                     true
                 )
