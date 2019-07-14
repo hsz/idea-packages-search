@@ -40,12 +40,20 @@
 
     <extensions defaultExtensionNs="com.intellij">
 
-        <applicationService
-                serviceInterface="mobi.hsz.intellij.packagessearch.components.PackagesSearchSettings"
-                serviceImplementation="mobi.hsz.intellij.packagessearch.components.PackagesSearchSettings"
+        <projectConfigurable
+                bundle="messages.PackagesSearchBundle"
+                displayName="Packages Search"
+                groupId="tools"
+                id="PackagesSearchConfigurable"
+                instance="mobi.hsz.intellij.packagessearch.settings.PackagesSearchConfigurable"
         />
 
-        <projectService
+        <applicationService
+                serviceInterface="mobi.hsz.intellij.packagessearch.settings.PackagesSearchSettings"
+                serviceImplementation="mobi.hsz.intellij.packagessearch.settings.PackagesSearchSettings"
+        />
+
+        <applicationService
                 serviceImplementation="mobi.hsz.intellij.packagessearch.searcheverywhere.PackagesSearchEverywhereConfiguration"
         />
 
