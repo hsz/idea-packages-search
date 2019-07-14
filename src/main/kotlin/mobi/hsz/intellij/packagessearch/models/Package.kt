@@ -1,4 +1,4 @@
-package mobi.hsz.idea.packagessearch.models
+package mobi.hsz.intellij.packagessearch.models
 
 interface Package {
     val name: String

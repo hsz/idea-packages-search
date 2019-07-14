@@ -1,4 +1,4 @@
-package mobi.hsz.idea.packagessearch.models
+package mobi.hsz.intellij.packagessearch.models
 
 import com.github.kittinunf.fuel.core.ResponseDeserializable
 import com.google.gson.Gson

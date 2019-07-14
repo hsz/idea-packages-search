@@ -1,4 +1,4 @@
-package mobi.hsz.idea.packagessearch
+package mobi.hsz.intellij.packagessearch
 
 import com.intellij.CommonBundle
 import org.jetbrains.annotations.PropertyKey

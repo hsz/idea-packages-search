@@ -1,4 +1,4 @@
-package mobi.hsz.idea.packagessearch.searcheverywhere
+package mobi.hsz.intellij.packagessearch.searcheverywhere
 
 import com.github.kittinunf.result.success
 import com.intellij.ide.actions.searcheverywhere.PersistentSearchEverywhereContributorFilter
@@ -15,11 +15,11 @@ import com.intellij.util.TimeoutUtil
 import com.intellij.util.ui.JBEmptyBorder
 import com.intellij.util.ui.JBUI
 import com.intellij.util.ui.UIUtil
-import mobi.hsz.idea.packagessearch.PackagesSearchBundle
-import mobi.hsz.idea.packagessearch.models.Package
-import mobi.hsz.idea.packagessearch.utils.ApiService
-import mobi.hsz.idea.packagessearch.utils.Constants
-import mobi.hsz.idea.packagessearch.utils.RegistryContext
+import mobi.hsz.intellij.packagessearch.PackagesSearchBundle
+import mobi.hsz.intellij.packagessearch.models.Package
+import mobi.hsz.intellij.packagessearch.utils.ApiService
+import mobi.hsz.intellij.packagessearch.utils.Constants
+import mobi.hsz.intellij.packagessearch.utils.RegistryContext
 import org.jetbrains.annotations.NotNull
 import java.awt.BorderLayout
 import java.util.function.Function

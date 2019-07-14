@@ -1,13 +1,13 @@
-package mobi.hsz.idea.packagessearch.components
+package mobi.hsz.intellij.packagessearch.components
 
 import com.intellij.openapi.components.PersistentStateComponent
 import com.intellij.openapi.components.ServiceManager
 import com.intellij.openapi.components.State
 import com.intellij.openapi.components.Storage
 import com.intellij.openapi.project.Project
-import mobi.hsz.idea.packagessearch.utils.RegistryContext
-import mobi.hsz.idea.packagessearch.utils.RxBus
-import mobi.hsz.idea.packagessearch.utils.events.RegistryChangedEvent
+import mobi.hsz.intellij.packagessearch.utils.RegistryContext
+import mobi.hsz.intellij.packagessearch.utils.RxBus
+import mobi.hsz.intellij.packagessearch.utils.events.RegistryChangedEvent
 
 @State(name = "PackagesSearchSettings", storages = [Storage("packagesSearch.xml")])
 class PackagesSearchSettings : PersistentStateComponent<PackagesSearchSettings.State> {

@@ -1,8 +1,8 @@
-package mobi.hsz.idea.packagessearch.utils
+package mobi.hsz.intellij.packagessearch.utils
 
-import mobi.hsz.idea.packagessearch.PackagesSearchBundle
-import mobi.hsz.idea.packagessearch.models.npm.NpmModel
-import mobi.hsz.idea.packagessearch.models.packagist.PackagistModel
+import mobi.hsz.intellij.packagessearch.PackagesSearchBundle
+import mobi.hsz.intellij.packagessearch.models.npm.NpmModel
+import mobi.hsz.intellij.packagessearch.models.packagist.PackagistModel
 import javax.swing.Icon
 
 enum class RegistryContext {

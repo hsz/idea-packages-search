@@ -1,4 +1,4 @@
-package mobi.hsz.idea.packagessearch.utils
+package mobi.hsz.intellij.packagessearch.utils
 
 import io.reactivex.Observable
 import io.reactivex.subjects.PublishSubject

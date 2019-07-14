@@ -1,2 +1,2 @@
-# idea-packagesearch
+# intellij-packagesearch
 IntelliJ Package Search plugin

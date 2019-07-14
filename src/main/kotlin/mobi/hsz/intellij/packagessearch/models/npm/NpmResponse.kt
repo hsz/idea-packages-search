@@ -1,6 +1,6 @@
-package mobi.hsz.idea.packagessearch.models.npm
+package mobi.hsz.intellij.packagessearch.models.npm
 
-import mobi.hsz.idea.packagessearch.models.Response
+import mobi.hsz.intellij.packagessearch.models.Response
 
 data class NpmResponse(
     val total: Int = 0,

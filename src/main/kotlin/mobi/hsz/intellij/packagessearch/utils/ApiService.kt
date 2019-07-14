@@ -1,4 +1,4 @@
-package mobi.hsz.idea.packagessearch.utils
+package mobi.hsz.intellij.packagessearch.utils
 
 import com.github.kittinunf.fuel.core.Headers
 import com.github.kittinunf.fuel.coroutines.awaitObjectResponse

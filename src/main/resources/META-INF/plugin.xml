@@ -1,15 +1,15 @@
 <idea-plugin>
-    <id>mobi.hsz.idea.packagessearch</id>
+    <id>mobi.hsz.intellij.packagessearch</id>
     <name>Packages Search</name>
     <version>0.1.0</version>
-    <vendor email="jakub@hsz.mobi" url="https://github.com/hsz/idea-packages-search">hsz</vendor>
+    <vendor email="jakub@hsz.mobi" url="https://github.com/hsz/intellij-packages-search">hsz</vendor>
 
     <description><![CDATA[
       <h1>Packages Search</h1>
       <br/>
 
-      <a href="https://github.com/hsz/idea-packages-search">GitHub</a> |
-      <a href="https://github.com/hsz/idea-packages-search/issues">Issues</a> |
+      <a href="https://github.com/hsz/intellij-packages-search">GitHub</a> |
+      <a href="https://github.com/hsz/intellij-packages-search/issues">Issues</a> |
       <a href="https://www.paypal.me/hsz">Donate with PayPal</a>
       <br/>
       <br/>
@@ -30,8 +30,8 @@
 
     <change-notes><![CDATA[
 
-        <a href="https://github.com/hsz/idea-packages-search/blob/master/CHANGELOG.md"><b>Full Changelog History</b></a>
-        <a href="https://github.com/hsz/idea-packages-search/blob/master/CHANGELOG.md"><b>Full Changelog History</b></a>
+        <a href="https://github.com/hsz/intellij-packages-search/blob/master/CHANGELOG.md"><b>Full Changelog History</b></a>
+        <a href="https://github.com/hsz/intellij-packages-search/blob/master/CHANGELOG.md"><b>Full Changelog History</b></a>
 
     ]]>
     </change-notes>
@@ -41,16 +41,16 @@
     <extensions defaultExtensionNs="com.intellij">
 
         <applicationService
-                serviceInterface="mobi.hsz.idea.packagessearch.components.PackagesSearchSettings"
-                serviceImplementation="mobi.hsz.idea.packagessearch.components.PackagesSearchSettings"
+                serviceInterface="mobi.hsz.intellij.packagessearch.components.PackagesSearchSettings"
+                serviceImplementation="mobi.hsz.intellij.packagessearch.components.PackagesSearchSettings"
         />
 
         <projectService
-                serviceImplementation="mobi.hsz.idea.packagessearch.searcheverywhere.PackagesSearchEverywhereConfiguration"
+                serviceImplementation="mobi.hsz.intellij.packagessearch.searcheverywhere.PackagesSearchEverywhereConfiguration"
         />
 
         <searchEverywhereContributor
-                implementation="mobi.hsz.idea.packagessearch.searcheverywhere.PackagesSearchEverywhereContributor$Factory"
+                implementation="mobi.hsz.intellij.packagessearch.searcheverywhere.PackagesSearchEverywhereContributor$Factory"
         />
 
     </extensions>

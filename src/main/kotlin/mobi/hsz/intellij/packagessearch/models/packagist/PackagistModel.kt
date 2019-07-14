@@ -1,8 +1,8 @@
-package mobi.hsz.idea.packagessearch.models.packagist
+package mobi.hsz.intellij.packagessearch.models.packagist
 
 import com.github.kittinunf.fuel.core.ResponseDeserializable
-import mobi.hsz.idea.packagessearch.models.Model
-import mobi.hsz.idea.packagessearch.models.Response
+import mobi.hsz.intellij.packagessearch.models.Model
+import mobi.hsz.intellij.packagessearch.models.Response
 
 class PackagistModel : Model<PackagistPackage>() {
     override fun url(query: String) = "https://registry.npmjs.org/-/v1/search?text=$query&size=10"

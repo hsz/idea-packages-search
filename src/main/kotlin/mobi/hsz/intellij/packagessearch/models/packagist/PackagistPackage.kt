@@ -1,7 +1,7 @@
-package mobi.hsz.idea.packagessearch.models.packagist
+package mobi.hsz.intellij.packagessearch.models.packagist
 
-import mobi.hsz.idea.packagessearch.models.Package
-import mobi.hsz.idea.packagessearch.models.npm.PackageLeaf
+import mobi.hsz.intellij.packagessearch.models.Package
+import mobi.hsz.intellij.packagessearch.models.npm.PackageLeaf
 
 data class PackagistPackage(
     val `package`: PackageLeaf
