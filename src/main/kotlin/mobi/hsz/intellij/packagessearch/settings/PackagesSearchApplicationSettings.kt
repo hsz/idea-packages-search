@@ -12,15 +12,15 @@ class PackagesSearchApplicationSettings : PersistentStateComponent<PackagesSearc
     override fun getState() = state
 
     override fun loadState(newState: PackagesSearchApplicationConfig) {
-        state.version = newState.version
+        state.limit = newState.limit
     }
 
     fun apply(newConfig: PackagesSearchApplicationConfig) {
-        state.version = newConfig.version
+        state.limit = newConfig.limit
     }
 
     fun getConfig() = PackagesSearchApplicationConfig(
-        version = state.version
+        limit = state.limit
     )
 
     companion object {

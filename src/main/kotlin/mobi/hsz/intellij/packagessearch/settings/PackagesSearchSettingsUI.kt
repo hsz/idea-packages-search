@@ -4,9 +4,10 @@ import com.intellij.openapi.project.Project
 import com.intellij.openapi.ui.ComboBox
 import com.intellij.ui.CollectionComboBoxModel
 import com.intellij.ui.IdeBorderFactory
+import com.intellij.ui.JBIntSpinner
 import com.intellij.ui.components.JBLabel
 import com.intellij.ui.components.JBPanel
-import com.intellij.ui.components.JBTextField
+import com.intellij.util.ui.UIUtil
 import mobi.hsz.intellij.packagessearch.PackagesSearchBundle
 import mobi.hsz.intellij.packagessearch.utils.RegistryContext
 import java.awt.Component
@@ -29,8 +30,7 @@ class PackagesSearchSettingsUI(private val project: Project) {
         PackagesSearchProjectConfig(
             registry = panel.registryModel.selected!!
         ) to PackagesSearchApplicationConfig(
-            version = panel.versionField.text
-
+            limit = panel.limitField.number
         )
 
     fun isModified(): Boolean {
@@ -44,7 +44,7 @@ class PackagesSearchSettingsUI(private val project: Project) {
         panel.registryModel.selectedItem = projectState.registry
 
         val applicationState = PackagesSearchApplicationSettings.getInstance().state
-        panel.versionField.text = applicationState.version
+        panel.limitField.number = applicationState.limit
     }
 
     inner class PackagesSearchSettingsPanel(
@@ -57,7 +57,7 @@ class PackagesSearchSettingsUI(private val project: Project) {
 
         val registryModel = CollectionComboBoxModel(RegistryContext.values().toList())
         val registryField = ComboBox<RegistryContext>(registryModel)
-        val versionField = JBTextField("version")
+        val limitField = JBIntSpinner(15, 3, 60)
 
         init {
             layout = GridBagLayout()
@@ -80,16 +80,15 @@ class PackagesSearchSettingsUI(private val project: Project) {
 
                 addRow(
                     this, listOf(
-                        JBLabel("Version"),
-                        versionField
+                        JBLabel(PackagesSearchBundle.message("settings.limit")),
+                        limitField
                     ), 0
                 )
-                addRow(
-                    this, listOf(
-                        JBLabel("Version XXXXXX"),
-                        JBLabel("xx")
-                    ), 1
-                )
+                addElement(this, JBLabel().apply {
+                    fontColor = UIUtil.FontColor.BRIGHTER
+                    font = UIUtil.getFont(UIUtil.FontSize.SMALL, font)
+                    text = PackagesSearchBundle.message("settings.limit.description")
+                }, 1, 1, insets = Insets(0, 10, 0, 10))
             }
 
             addElement(this, projectSettingsPanel, 0, 0)
@@ -128,7 +127,7 @@ class PackagesSearchSettingsUI(private val project: Project) {
             registryModel.selectedItem = projectConfig.registry
 
             // applicationConfig
-            versionField.text = applicationConfig.version
+            limitField.number = applicationConfig.limit
         }
     }
 }

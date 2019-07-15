@@ -50,7 +50,7 @@ class PackagesSearchEverywhereContributor(
         query = pattern
         TimeoutUtil.sleep(Constants.SEARCH_DELAY)
         if (query == pattern) {
-            ApiService.search(RegistryContext.NPM, pattern).success {
+            ApiService.search(projectConfig.registry, pattern, applicationConfig.limit).success {
                 it.items.forEach { pkg -> consumer.apply(pkg) }
             }
         }
