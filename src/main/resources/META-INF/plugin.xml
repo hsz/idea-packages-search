@@ -48,9 +48,14 @@
                 instance="mobi.hsz.intellij.packagessearch.settings.PackagesSearchConfigurable"
         />
 
+        <projectService
+                serviceInterface="mobi.hsz.intellij.packagessearch.settings.PackagesSearchProjectSettings"
+                serviceImplementation="mobi.hsz.intellij.packagessearch.settings.PackagesSearchProjectSettings"
+        />
+
         <applicationService
-                serviceInterface="mobi.hsz.intellij.packagessearch.settings.PackagesSearchSettings"
-                serviceImplementation="mobi.hsz.intellij.packagessearch.settings.PackagesSearchSettings"
+                serviceInterface="mobi.hsz.intellij.packagessearch.settings.PackagesSearchApplicationSettings"
+                serviceImplementation="mobi.hsz.intellij.packagessearch.settings.PackagesSearchApplicationSettings"
         />
 
         <applicationService
@@ -62,4 +67,20 @@
         />
 
     </extensions>
+
+    <actions>
+
+        <group>
+            <action
+                    id="PackagesSearch"
+                    class="mobi.hsz.intellij.packagessearch.actions.GotoPackagesSearchAction"
+                    icon="AllIcons.Actions.Find"
+                    text="Packages Search"
+            >
+                <keyboard-shortcut first-keystroke="alt p" keymap="$default"/>
+            </action>
+            <add-to-group group-id="ToolsBasicGroup"/>
+        </group>
+
+    </actions>
 </idea-plugin>

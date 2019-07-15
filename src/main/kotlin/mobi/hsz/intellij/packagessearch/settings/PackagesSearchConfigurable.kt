@@ -1,11 +1,11 @@
 package mobi.hsz.intellij.packagessearch.settings
 
 import com.intellij.openapi.options.SearchableConfigurable
+import com.intellij.openapi.project.Project
 import mobi.hsz.intellij.packagessearch.PackagesSearchBundle
-import javax.swing.JComponent
 
-class PackagesSearchConfigurable : SearchableConfigurable {
-    private val settingsUI by lazy { PackagesSearchSettingsUI() }
+class PackagesSearchConfigurable(private val project: Project) : SearchableConfigurable {
+    private val settingsUI by lazy { PackagesSearchSettingsUI(project) }
 
     override fun getId() = "PackagesSearchConfigurable"
 
@@ -14,13 +14,14 @@ class PackagesSearchConfigurable : SearchableConfigurable {
     override fun isModified() = settingsUI.isModified()
 
     override fun apply() {
-        val settings = PackagesSearchSettings.getInstance()
-        settings.apply(settingsUI.createConfig())
+        val (projectConfig, applicationConfig) = settingsUI.createConfig()
+        PackagesSearchProjectSettings.getInstance(project).apply(projectConfig)
+        PackagesSearchApplicationSettings.getInstance().apply(applicationConfig)
     }
 
     override fun reset() {
         settingsUI.reset()
     }
 
-    override fun createComponent(): JComponent? = settingsUI.createComponent()
+    override fun createComponent() = settingsUI.createComponent()
 }

@@ -1,7 +1,6 @@
 package mobi.hsz.intellij.packagessearch.searcheverywhere
 
 import com.github.kittinunf.result.success
-import com.intellij.ide.actions.searcheverywhere.PersistentSearchEverywhereContributorFilter
 import com.intellij.ide.actions.searcheverywhere.SearchEverywhereContributor
 import com.intellij.ide.actions.searcheverywhere.SearchEverywhereContributorFactory
 import com.intellij.ide.actions.searcheverywhere.SearchEverywhereContributorFilter
@@ -17,6 +16,8 @@ import com.intellij.util.ui.JBUI
 import com.intellij.util.ui.UIUtil
 import mobi.hsz.intellij.packagessearch.PackagesSearchBundle
 import mobi.hsz.intellij.packagessearch.models.Package
+import mobi.hsz.intellij.packagessearch.settings.PackagesSearchApplicationConfig
+import mobi.hsz.intellij.packagessearch.settings.PackagesSearchProjectConfig
 import mobi.hsz.intellij.packagessearch.utils.ApiService
 import mobi.hsz.intellij.packagessearch.utils.Constants
 import mobi.hsz.intellij.packagessearch.utils.RegistryContext
@@ -29,9 +30,10 @@ import javax.swing.JPanel
 import javax.swing.ListCellRenderer
 
 class PackagesSearchEverywhereContributor(
-    private val project: Project?
+    private val project: Project
 ) : SearchEverywhereContributor<RegistryContext> {
-
+    private val projectConfig = PackagesSearchProjectConfig.getCurrent(project)
+    private val applicationConfig = PackagesSearchApplicationConfig.getCurrent()
     private var query = ""
 
     override fun fetchElements(
@@ -54,7 +56,7 @@ class PackagesSearchEverywhereContributor(
         }
     }
 
-    override fun getAdvertisement() = PackagesSearchBundle.message("searchEverywhere.advertisement")
+    override fun getAdvertisement() = projectConfig.registry.name
 
     override fun getDataForItem(@NotNull element: Any, @NotNull dataId: String): Nothing? = null
 
@@ -75,22 +77,25 @@ class PackagesSearchEverywhereContributor(
     override fun showInFindResults() = false
 
     override fun processSelectedItem(@NotNull selected: Any, modifiers: Int, @NotNull text: String): Boolean {
+        // modifiers = 1 -> SHIFT
+        // modifiers = 2 -> CTRL
+        // modifiers = 8 -> ALT
         return false
     }
 
-    private class PackageRenderer(private val project: Project?) : DefaultListCellRenderer() {
+    private class PackageRenderer(private val project: Project) : DefaultListCellRenderer() {
         private val cell = object : JPanel(BorderLayout()) {
             private val nameLabel = JBLabel()
             private val versionLabel = JBLabel()
             private val descriptionLabel = JBLabel()
 
             init {
+                isOpaque = true
                 border = JBUI.Borders.merge(
                     JBUI.Borders.empty(5, 25, 5, 15),
                     JBUI.Borders.customLine(JBColor.GRAY.darker(), 0, 0, 1, 0),
                     true
                 )
-                isOpaque = true
 
                 add(nameLabel.apply {
                     font = JBUI.Fonts.label().asBold()
@@ -129,23 +134,10 @@ class PackagesSearchEverywhereContributor(
     }
 
     class Factory : SearchEverywhereContributorFactory<RegistryContext> {
-        override fun createFilter(initEvent: AnActionEvent?): SearchEverywhereContributorFilter<RegistryContext>? {
-            if (initEvent == null) {
-                return null
-            }
-
-            val project = initEvent.project ?: return null
-
-            return PersistentSearchEverywhereContributorFilter<RegistryContext>(
-                RegistryContext.values().toList(),
-                PackagesSearchEverywhereConfiguration.getInstance(project),
-                RegistryContext::toString,
-                RegistryContext::icon
-            )
-        }
+        override fun createFilter(initEvent: AnActionEvent?): Nothing? = null
 
         @NotNull
         override fun createContributor(@NotNull initEvent: AnActionEvent) =
-            PackagesSearchEverywhereContributor(initEvent.project)
+            PackagesSearchEverywhereContributor(initEvent.project!!)
     }
 }

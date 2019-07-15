@@ -4,12 +4,13 @@ import com.intellij.openapi.components.PersistentStateComponent
 import com.intellij.openapi.components.ServiceManager
 import com.intellij.openapi.components.State
 import com.intellij.openapi.components.Storage
+import com.intellij.openapi.project.Project
 import mobi.hsz.intellij.packagessearch.utils.RxBus
 import mobi.hsz.intellij.packagessearch.utils.events.RegistryChangedEvent
 
-@State(name = "PackagesSearchSettings", storages = [Storage("packagesSearch.xml")])
-class PackagesSearchSettings : PersistentStateComponent<PackagesSearchConfig> {
-    private var state = PackagesSearchConfig()
+@State(name = "PackagesSearchProjectSettings", storages = [Storage("packagesSearch.xml")])
+class PackagesSearchProjectSettings(val project: Project) : PersistentStateComponent<PackagesSearchProjectConfig> {
+    private var state = PackagesSearchProjectConfig()
 
     init {
         RxBus.listen(RegistryChangedEvent::class.java).subscribe {
@@ -19,22 +20,20 @@ class PackagesSearchSettings : PersistentStateComponent<PackagesSearchConfig> {
 
     override fun getState() = state
 
-    override fun loadState(newState: PackagesSearchConfig) {
+    override fun loadState(newState: PackagesSearchProjectConfig) {
         state.registry = newState.registry
-        state.version = newState.version
     }
 
-    fun apply(newConfig: PackagesSearchConfig) {
+    fun apply(newConfig: PackagesSearchProjectConfig) {
         state.registry = newConfig.registry
-        state.version = newConfig.version
     }
 
-    fun getConfig() = PackagesSearchConfig(
-        registry = state.registry,
-        version = state.version
+    fun getConfig() = PackagesSearchProjectConfig(
+        registry = state.registry
     )
 
     companion object {
-        fun getInstance() = ServiceManager.getService(PackagesSearchSettings::class.java)!!
+        fun getInstance(project: Project) =
+            ServiceManager.getService(project, PackagesSearchProjectSettings::class.java)!!
     }
 }
