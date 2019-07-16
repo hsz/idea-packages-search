@@ -36,6 +36,7 @@
     ]]>
     </change-notes>
 
+    <depends>com.intellij.modules.lang</depends>
     <idea-version since-build="191.0.0"/>
 
     <extensions defaultExtensionNs="com.intellij">
@@ -80,6 +81,29 @@
                 <keyboard-shortcut first-keystroke="alt p" keymap="$default"/>
             </action>
             <add-to-group group-id="ToolsBasicGroup"/>
+        </group>
+
+        <group id="PackagesSearchBehaviors">
+            <action
+                    id="PackagesSearchShowReadme"
+                    class="mobi.hsz.intellij.packagessearch.actions.DummyAction"
+                    text="Show README"
+            />
+            <action
+                    id="PackagesSearchOpenInBrowser"
+                    class="mobi.hsz.intellij.packagessearch.actions.DummyAction"
+                    text="Open in browser"
+            />
+            <action
+                    id="PackagesSearchInstall"
+                    class="mobi.hsz.intellij.packagessearch.actions.DummyAction"
+                    text="Install package"
+            />
+            <action
+                    id="PackagesSearchOpenSettings"
+                    class="mobi.hsz.intellij.packagessearch.actions.DummyAction"
+                    text="Open settings"
+            />
         </group>
 
     </actions>

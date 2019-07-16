@@ -1,12 +1,17 @@
 package mobi.hsz.intellij.packagessearch.searcheverywhere
 
 import com.github.kittinunf.result.success
+import com.intellij.ide.DataManager
 import com.intellij.ide.actions.searcheverywhere.SearchEverywhereContributor
 import com.intellij.ide.actions.searcheverywhere.SearchEverywhereContributorFactory
 import com.intellij.ide.actions.searcheverywhere.SearchEverywhereContributorFilter
+import com.intellij.openapi.actionSystem.ActionGroup
+import com.intellij.openapi.actionSystem.ActionManager
 import com.intellij.openapi.actionSystem.AnActionEvent
+import com.intellij.openapi.actionSystem.PlatformDataKeys
 import com.intellij.openapi.progress.ProgressIndicator
 import com.intellij.openapi.project.Project
+import com.intellij.openapi.ui.popup.JBPopupFactory
 import com.intellij.openapi.util.text.StringUtil
 import com.intellij.ui.JBColor
 import com.intellij.ui.components.JBLabel
@@ -23,6 +28,7 @@ import mobi.hsz.intellij.packagessearch.utils.Constants
 import mobi.hsz.intellij.packagessearch.utils.RegistryContext
 import org.jetbrains.annotations.NotNull
 import java.awt.BorderLayout
+import java.awt.Component
 import java.util.function.Function
 import javax.swing.DefaultListCellRenderer
 import javax.swing.JList
@@ -30,7 +36,8 @@ import javax.swing.JPanel
 import javax.swing.ListCellRenderer
 
 class PackagesSearchEverywhereContributor(
-    private val project: Project
+    private val project: Project,
+    private val contextComponent: Component
 ) : SearchEverywhereContributor<RegistryContext> {
     private val projectConfig = PackagesSearchProjectConfig.getCurrent(project)
     private val applicationConfig = PackagesSearchApplicationConfig.getCurrent()
@@ -77,6 +84,18 @@ class PackagesSearchEverywhereContributor(
     override fun showInFindResults() = false
 
     override fun processSelectedItem(@NotNull selected: Any, modifiers: Int, @NotNull text: String): Boolean {
+        val pkg = selected as Package
+        val group = ActionManager.getInstance().getAction("PackagesSearchBehaviors") as ActionGroup
+        val dataContext = DataManager.getInstance().getDataContext(contextComponent)
+
+        JBPopupFactory.getInstance().createActionGroupPopup(
+            pkg.name,
+            group,
+            dataContext,
+            JBPopupFactory.ActionSelectionAid.NUMBERING,
+            true
+        ).showCenteredInCurrentWindow(project)
+
         // modifiers = 1 -> SHIFT
         // modifiers = 2 -> CTRL
         // modifiers = 8 -> ALT
@@ -138,6 +157,9 @@ class PackagesSearchEverywhereContributor(
 
         @NotNull
         override fun createContributor(@NotNull initEvent: AnActionEvent) =
-            PackagesSearchEverywhereContributor(initEvent.project!!)
+            PackagesSearchEverywhereContributor(
+                initEvent.project!!,
+                initEvent.getData(PlatformDataKeys.CONTEXT_COMPONENT)!!
+            )
     }
 }
