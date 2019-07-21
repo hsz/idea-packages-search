@@ -1,6 +1,8 @@
 package mobi.hsz.intellij.packagessearch.utils
 
 import mobi.hsz.intellij.packagessearch.PackagesSearchBundle
+import mobi.hsz.intellij.packagessearch.models.docker.DockerModel
+import mobi.hsz.intellij.packagessearch.models.maven.MavenModel
 import mobi.hsz.intellij.packagessearch.models.npm.NpmModel
 import mobi.hsz.intellij.packagessearch.models.packagist.PackagistModel
 import javax.swing.Icon
@@ -9,8 +11,8 @@ enum class RegistryContext {
     DOCKER, MAVEN, NPM, PACKAGIST, PYPI;
 
     fun model() = when (this) {
-        DOCKER-> NpmModel()
-        MAVEN -> NpmModel()
+        DOCKER-> DockerModel()
+        MAVEN -> MavenModel()
         NPM -> NpmModel()
         PACKAGIST -> PackagistModel()
         PYPI -> NpmModel()

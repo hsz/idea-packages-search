@@ -11,9 +11,9 @@ class ApiService {
             limit: Int
         ) =
             context.model().let {
-                it.url(query, limit).httpGet().header(
-                    Headers.USER_AGENT, Constants.USER_AGENT
-                ).responseObject(it.deserializer()).third
+                it.url(query, limit).httpGet()
+                    .header(Headers.USER_AGENT, Constants.USER_AGENT)
+                    .responseObject(it.deserializer()).third
             }
     }
 }
